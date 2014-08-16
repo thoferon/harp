@@ -1,6 +1,7 @@
 #ifndef CONNECTION_POOL_H
 #define CONNECTION_POOL_H 1
 
+#include <stdbool.h>
 #include <poll.h>
 
 #include <list.h>
@@ -24,10 +25,10 @@ aconnection_t *make_aconnection(unsigned int, int, int);
 void free_lconnection(lconnection_t *);
 void free_aconnection(aconnection_t *);
 
-list_t *create_connection_pool(list_t *);
+list_t *create_connection_pool(list_t *, list_t *);
 lconnection_t *create_lconnection(int);
 
-void destroy_connection_pool(list_t *);
+void destroy_connection_pool(list_t *, list_t *);
 void destroy_lconnection(lconnection_t *);
 void destroy_aconnection(aconnection_t *);
 

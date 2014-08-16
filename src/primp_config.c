@@ -5,6 +5,7 @@
 #include <config_lexer.h> // FIXME: Make config_lexer.h include config_parser.h
 
 #include <memory.h>
+#include <log.h>
 #include <config.h>
 #include <list.h>
 #include <primp_config.h>
@@ -28,7 +29,7 @@ list_t *read_configs(char *path) {
     memcpy(end, path, path_len);
     end += path_len;
     *end = ')';
-    perror(prefix);
+    logerror(prefix);
     return NULL;
   }
   yyset_in(f, scanner);

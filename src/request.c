@@ -7,6 +7,8 @@
 #include <errno.h>
 
 #include <memory.h>
+#include <log.h>
+
 #include <request.h>
 
 /*
@@ -54,7 +56,7 @@ int read_info(int socket, char **path_ptr, char **hostname_ptr,
         size_t new_allocated_size = allocated_size + 512;
         char *new_buffer;
         if((new_buffer = (char*)realloc(buffer, new_allocated_size)) == NULL) {
-          perror("read_hostname:realloc");
+          logerror("read_hostname:realloc");
           RETURNFAILURE();
         }
         buffer         = new_buffer;
@@ -65,7 +67,7 @@ int read_info(int socket, char **path_ptr, char **hostname_ptr,
       while((count = recv(socket, (char*)buffer + i, allocated_size - buffer_size, MSG_DONTWAIT)) == -1 && errno == EAGAIN);
       if(count == 0 || count == -1) {
         if(count == -1) {
-          perror("read_hostname:recv");
+          logerror("read_hostname:recv");
         }
         RETURNFAILURE();
       }

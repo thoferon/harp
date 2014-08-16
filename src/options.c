@@ -39,7 +39,9 @@ options_t *read_options(int argc, char **argv) {
     }
   }
 
-  if(options->config_path == NULL) options->config_path = strdup(DEFAULT_CONFIG_PATH);
+  if(options->config_path == NULL) {
+    options->config_path = strdup(DEFAULT_CONFIG_PATH);
+  }
 
   return options;
 }

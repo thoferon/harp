@@ -1,0 +1,5 @@
+#!/bin/sh
+
+mkdir -p m4
+curl -o m4/ax_pthread.m4 'http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_pthread.m4'
+autoreconf --install

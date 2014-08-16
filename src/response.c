@@ -11,6 +11,8 @@
 #define PACKAGE_STRING "primp"
 #endif
 
+#include <log.h>
+
 #include <response.h>
 
 // FIXME: Calculate static string lengths at compile time
@@ -62,7 +64,7 @@ int send_http_status(int socket, http_status_t status) {
   // Should we send HTTP/1.0 or HTTP/1.1?
   int count = asprintf(&str, "HTTP/1.1 %i %s\r\n", status_code, status_message);
   if(count == -1) {
-    perror("send_http_status:asprintf");
+    logerror("send_http_status:asprintf");
     return -1;
   }
 
@@ -71,7 +73,7 @@ int send_http_status(int socket, http_status_t status) {
   free(str);
 
   if(rc == -1) {
-    perror("send_http_status:send");
+    logerror("send_http_status:send");
     return -1;
   }
 
@@ -85,7 +87,7 @@ int send_server_header(int socket) {
   while((rc = send(socket, server_header, server_header_len, MSG_DONTWAIT)) == -1
         && errno == EAGAIN);
   if(rc == -1) {
-    perror("send_server_header:send");
+    logerror("send_server_header:send");
     return -1;
   }
   return 0;
@@ -98,7 +100,7 @@ int send_connection_header(int socket) {
   while((rc = send(socket, connection_header, connection_header_len, MSG_DONTWAIT)) == -1
         && errno == EAGAIN);
   if(rc == -1) {
-    perror("send_connection_header:send");
+    logerror("send_connection_header:send");
     return -1;
   }
   return 0;
@@ -108,7 +110,7 @@ int send_content_length_header(int socket, int content_length) {
   char *content_length_header;
   int count = asprintf(&content_length_header, "Content-Length: %u\r\n", content_length);
   if(count == -1) {
-    perror("send_content_length:asprintf");
+    logerror("send_content_length:asprintf");
     return -1;
   }
 
@@ -116,7 +118,7 @@ int send_content_length_header(int socket, int content_length) {
   while((rc = send(socket, content_length_header, count, MSG_DONTWAIT)) == -1
         && errno == EAGAIN);
   if(rc == -1) {
-    perror("send_content_length_header:send");
+    logerror("send_content_length_header:send");
     return -1;
   }
   free(content_length_header);
@@ -146,7 +148,7 @@ int send_content_type_header(int socket, mime_type_t mime_type) {
   int count = asprintf(&content_type_header, "Content-Type: %s\r\n",
                        formatted_mime_type);
   if(count == 1) {
-    perror("send_content_type_header:asprintf");
+    logerror("send_content_type_header:asprintf");
     return -1;
   }
 
@@ -154,7 +156,7 @@ int send_content_type_header(int socket, mime_type_t mime_type) {
   while((rc = send(socket, content_type_header, count, MSG_DONTWAIT)) == -1
         && errno == EAGAIN);
   if(rc == -1) {
-    perror("send_content_length:send");
+    logerror("send_content_length:send");
     return -1;
   }
 
@@ -165,7 +167,7 @@ int send_extra_crlf(int socket) {
   int rc;
   while((rc = send(socket, "\r\n", 2, MSG_DONTWAIT)) == -1 && errno == EAGAIN);
   if(rc == -1) {
-    perror("send_extra_crlf:send");
+    logerror("send_extra_crlf:send");
     return -1;
   }
   return 0;

@@ -15,6 +15,7 @@
 #endif
 
 #include <memory.h>
+#include <log.h>
 #include <request.h>
 #include <primp_config.h>
 #include <list.h>
@@ -116,7 +117,7 @@ void execute_fallback_strategy(int socket, resolution_strategy_t strategy) {
   // If it's anything else than -1, it doesn't matter,
   // it's gonna get closed after anyway.
   if(rc == -1) {
-    perror("execute_fallback_strategy:ssend");
+    logerror("execute_fallback_strategy:ssend");
   }
 }
 
@@ -140,7 +141,9 @@ resolution_strategy_t resolve_with_static_path(request_t *request, char *static_
 
   struct stat dirstat;
   if((rc = stat(local_path, &dirstat)) == -1) {
-    perror("resolve_with_static_path:stat");
+    if(errno != ENOENT) {
+      logerror("resolve_with_static_path:stat");
+    }
     free(local_path);
     return errno == ENOENT ? RESOLUTION_STRATEGY_404 : RESOLUTION_STRATEGY_500;
   }
@@ -165,20 +168,20 @@ resolution_strategy_t resolve_with_static_path(request_t *request, char *static_
   }
   free(local_path);
 
-#define CLOSEFILE() do {                         \
-    rc = fclose(f);                              \
-    if(rc == -1) {                               \
-      perror("resolve_with_static_path:fclose"); \
-      return RESOLUTION_STRATEGY_500;            \
-    }                                            \
-  } while(0)                                     \
+#define CLOSEFILE() do {                                \
+    rc = fclose(f);                                     \
+    if(rc == -1) {                                      \
+      logerror("resolve_with_static_path:fclose");      \
+      return RESOLUTION_STRATEGY_500;                   \
+    }                                                   \
+  } while(0)                                            \
 
   int socket = request->aconnection->socket;
 
   int fd = fileno(f);
   struct stat fs;
   if(fstat(fd, &fs) == -1) {
-    perror("resolve_with_static_path:fstat");
+    logerror("resolve_with_static_path:fstat");
     CLOSEFILE();
     return RESOLUTION_STRATEGY_500;
   }
@@ -195,7 +198,7 @@ resolution_strategy_t resolve_with_static_path(request_t *request, char *static_
   while((count = fread(&buffer, 1, READ_BUFFER_SIZE, f)) > 0) {
     while((rc = send(socket, buffer, count, MSG_DONTWAIT)) == -1 && errno == EAGAIN);
     if(rc == -1) {
-      perror("resolve_with_static_path:send");
+      logerror("resolve_with_static_path:send");
       CLOSEFILE();
       return RESOLUTION_STRATEGY_500;
     }
@@ -225,7 +228,7 @@ int proxy(int from, int to) {
     if(errno == EINTR || errno == EAGAIN) {
       return 1;
     } else {
-      perror("proxy:recv");
+      logerror("proxy:recv");
       return -1;
     }
   } else if(count == 0) {
@@ -233,7 +236,7 @@ int proxy(int from, int to) {
   } else {
     int rc = ssend(to, buf, count);
     if(rc == -1) {
-      perror("proxy:ssend");
+      logerror("proxy:ssend");
     }
     return rc;
   }
@@ -255,14 +258,14 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
   while((rc = getaddrinfo(server->hostname, port_string, &hints, &addrinfos))
         == EAI_AGAIN);
   if(rc != 0) {
-    fprintf(stderr, "resolve_with_server:getaddrinfo: %s\n", gai_strerror(rc));
+    logmsg(LOG_ERR, "resolve_with_server:getaddrinfo: %s\n", gai_strerror(rc));
     return RESOLUTION_STRATEGY_502;
   }
 
-#define RETURNERROR(code) do {                            \
-    rc = close(sock);                                     \
-    if(rc == -1) { perror("resolve_with_server:close"); } \
-    return (code);                                        \
+#define RETURNERROR(code) do {                                  \
+    rc = close(sock);                                           \
+    if(rc == -1) { logerror("resolve_with_server:close"); }     \
+    return (code);                                              \
   } while(0)
 
   if(addrinfos != NULL) {
@@ -270,7 +273,7 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
     for(current = addrinfos; current != NULL; current = current->ai_next) {
       sock = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
       if(sock == -1) {
-        perror("resolve_with_server:socket");
+        logerror("resolve_with_server:socket");
         return RESOLUTION_STRATEGY_500;
       }
 
@@ -284,7 +287,7 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
         rc = poll(pollfds, 1, 3 * 60 * 1000);
 
         if(rc == -1) {
-          perror("resolve_with_server:poll");
+          logerror("resolve_with_server:poll");
           RETURNERROR(RESOLUTION_STRATEGY_500);
         } else if(rc == 0) {
           RETURNERROR(RESOLUTION_STRATEGY_504);
@@ -294,7 +297,7 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
 
     freeaddrinfo(addrinfos);
     if(rc == -1) {
-      perror("resolve_with_server:connect");
+      logerror("resolve_with_server:connect");
       if(errno == ETIMEDOUT) {
         RETURNERROR(RESOLUTION_STRATEGY_504);
       } else {
@@ -303,25 +306,25 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
     }
 
   } else {
-    fprintf(stderr, "resolve_with_server:getaddrinfo: Empty result\n");
+    logmsg(LOG_ERR, "resolve_with_server:getaddrinfo: Empty result\n");
     return RESOLUTION_STRATEGY_502;
   }
 
   int flags = fcntl(sock, F_GETFL, NULL);
   if(flags == -1) {
-    perror("resolve_with_server:fcntl with F_GETFL");
+    logerror("resolve_with_server:fcntl with F_GETFL");
     RETURNERROR(RESOLUTION_STRATEGY_500);
   }
 
   rc = fcntl(sock, F_SETFL, flags | O_NONBLOCK);
   if(rc == -1) {
-    perror("resolve_with_server:fcntl with F_SETFL");
+    logerror("resolve_with_server:fcntl with F_SETFL");
     RETURNERROR(RESOLUTION_STRATEGY_500);
   }
 
   rc = ssend(sock, request->buffer, request->buffer_size);
   if(rc == -1) {
-    perror("resolve_with_request:ssend");
+    logerror("resolve_with_request:ssend");
     RETURNERROR(RESOLUTION_STRATEGY_502);
   }
   if(rc == -2) {
@@ -342,7 +345,7 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
 
     rc = poll(pollfds, 2, 3 * 60 * 1000);
     if(rc == -1) {
-      perror("resolve_with_server:poll");
+      logerror("resolve_with_server:poll");
       RETURNERROR2(RESOLUTION_STRATEGY_500);
     }
     if(rc == 0) {

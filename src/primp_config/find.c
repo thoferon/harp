@@ -45,7 +45,8 @@ bool matches_request_info(config_t *config, request_info_t *request_info) {
   return true;
 }
 
-config_t *find_config(list_t *configs, request_info_t *request_info, unsigned int hash) {
+config_t *find_config(list_t *configs, request_info_t *request_info,
+                      unsigned int hash) {
   list_t *current;
   LISTFOREACH(current, configs) {
     config_t *config        = current->element;

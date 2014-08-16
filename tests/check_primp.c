@@ -8,6 +8,7 @@ Suite *connection_suite();
 Suite *request_suite();
 Suite *resolve_suite();
 Suite *response_suite();
+Suite *worker_suite();
 
 #define ADD_SUITE(suite_func) { \
   suite = (suite_func)(); \
@@ -30,6 +31,7 @@ int main(int argc, char **argv) {
   ADD_SUITE(request_suite);
   ADD_SUITE(resolve_suite);
   ADD_SUITE(response_suite);
+  ADD_SUITE(worker_suite);
 
   return (failure_count == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }

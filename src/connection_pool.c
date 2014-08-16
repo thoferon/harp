@@ -1,5 +1,8 @@
+#include <config.h>
+
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -10,7 +13,7 @@
 #include <poll.h>
 
 #include <memory.h>
-#include <config.h>
+#include <log.h>
 #include <list.h>
 #include <connection_pool.h>
 
@@ -52,13 +55,26 @@ inline void free_aconnection(aconnection_t *aconnection) {
  * Networking functions
  */
 
-list_t *create_connection_pool(list_t *ports) {
+list_t *create_connection_pool(list_t *ports, list_t *old_connection_pool) {
   list_t *lconnections = EMPTY_LIST;
   list_t *current;
 
   LISTFOREACH(current, ports) {
     int port = *((int*)current->element);
-    lconnection_t *new_connection = create_lconnection(port);
+
+    lconnection_t *new_connection = NULL;
+    list_t *current2;
+    LISTFOREACH(current2, old_connection_pool) {
+      lconnection_t *old_connection = (lconnection_t*)current2->element;
+      if(old_connection->port == port) {
+        new_connection = old_connection;
+        break;
+      }
+    }
+
+    if(new_connection == NULL) {
+      new_connection = create_lconnection(port);
+    }
 
     if(new_connection != NULL) {
       // Order does not matter
@@ -73,8 +89,7 @@ list_t *create_connection_pool(list_t *ports) {
 }
 
 lconnection_t *create_lconnection(int port) {
-  int rc;
-  int sock;
+  int rc, sock;
 
   struct addrinfo hints, *addrinfos, *current;
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -88,14 +103,14 @@ lconnection_t *create_lconnection(int port) {
   // FIXME: The hostname should be overwritable in the config (as a top-level directive)
   while((rc = getaddrinfo(NULL, port_string, &hints, &addrinfos)) == EAI_AGAIN);
   if(rc != 0) {
-    fprintf(stderr, "create_connection:getaddrinfo: %s\n", gai_strerror(rc));
+    logmsg(LOG_ERR, "create_connection:getaddrinfo: %s\n", gai_strerror(rc));
     return NULL;
   }
 
-#define RETURNERROR() do {                              \
-    rc = close(sock);                                   \
-    if(rc == -1) { perror("create_connection:close"); } \
-    return NULL;                                        \
+#define RETURNERROR() do {                                      \
+    rc = close(sock);                                           \
+    if(rc == -1) { logerror("create_connection:close"); }       \
+    return NULL;                                                \
   } while(0)
 
   if(addrinfos != NULL) {
@@ -103,7 +118,7 @@ lconnection_t *create_lconnection(int port) {
     for(current = addrinfos; current != NULL; current = current->ai_next) {
       sock = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
       if(sock == -1) {
-        perror("create_connnection:socket");
+        logerror("create_connnection:socket");
         return NULL;
       }
 
@@ -113,50 +128,76 @@ lconnection_t *create_lconnection(int port) {
 
     freeaddrinfo(addrinfos);
     if(rc == -1) {
-      perror("create_connection:bind");
+      logerror("create_connection:bind");
       RETURNERROR();
     }
 
   } else {
-    fprintf(stderr, "create_connection:getaddrinfo: Empty result\n");
+    logmsg(LOG_ERR, "create_connection:getaddrinfo: Empty result\n");
     return NULL;
   }
 
   if(listen(sock, MAXCONN) == -1) {
-    perror("create_connection:listen");
+    logerror("create_connection:listen");
     RETURNERROR();
   }
 
   int flags = fcntl(sock, F_GETFL, NULL);
   if(flags == -1) {
-    perror("create_connection:fcntl with F_GETFL");
+    logerror("create_connection:fcntl with F_GETFL");
     RETURNERROR();
   }
 
   rc = fcntl(sock, F_SETFL, flags | O_NONBLOCK);
   if(rc == -1) {
-    perror("create_connection:fcntl with F_SETFL");
+    logerror("create_connection:fcntl with F_SETFL");
     RETURNERROR();
   }
+
+  logmsg(LOG_INFO, "Bound to port %i\n", port);
 
   return make_lconnection(port, sock);
 }
 
-void destroy_connection_pool(list_t *connection_pool) {
+/**
+ * Destroy the list of lconnection.
+ * @param ports The list of ports for which NOT to destroy the lconnection.
+ */
+void destroy_connection_pool(list_t *connection_pool, list_t *ports) {
   list_t *current;
   LISTFOREACH(current, connection_pool) {
     lconnection_t *lconnection = current->element;
-    destroy_lconnection(lconnection);
+
+    bool to_keep = false;
+    list_t *current2;
+    LISTFOREACH(current2, ports) {
+      int port = *((int*)current2->element);
+      if(lconnection->port == port) {
+        to_keep = true;
+        break;
+      }
+    }
+    if(!to_keep) {
+      destroy_lconnection(lconnection);
+    }
   }
+
+  free_list(connection_pool, NULL);
 }
 
 void destroy_lconnection(lconnection_t *lconnection) {
-  if(close(lconnection->socket) == -1) { perror("destroy_lconnection"); }
+  if(close(lconnection->socket) == -1) {
+    logerror("destroy_lconnection");
+  } else {
+    logmsg(LOG_INFO, "Listening socket on port %i closed\n", lconnection->port);
+  }
   free_lconnection(lconnection);
 }
 
 void destroy_aconnection(aconnection_t *aconnection) {
-  if(close(aconnection->socket) == -1) { perror("destroy_aconnection"); }
+  if(close(aconnection->socket) == -1) {
+    logerror("destroy_aconnection");
+  }
   free_aconnection(aconnection);
 }
 
@@ -187,14 +228,20 @@ void create_pollfds(list_t *lconnections, struct pollfd **pollfds_ptr,
   *n_ptr       = n;
 }
 
+/**
+ * Wait for the next connection on any of the socket of the connection pool.
+ * @return An accepted connection or NULL if it timed out.
+ */
 aconnection_t *get_next_connection(list_t *lconnections, struct pollfd *pollfds,
                                    nfds_t n) {
   list_t *current;
   while(1) {
     // FIXME: Any way to make it faster?
-    int rc = poll(pollfds, n, -1);
+    int rc = poll(pollfds, n, 5 * 1000);
     if(rc == -1) {
-      perror("get_next_connection:poll");
+      logerror("get_next_connection:poll");
+    } else if(rc == 0) {
+      return NULL;
     }
 
     LISTFOREACH(current, lconnections) {
@@ -207,7 +254,7 @@ aconnection_t *get_next_connection(list_t *lconnections, struct pollfd *pollfds,
         unsigned int addr_hash = compute_hash((struct sockaddr_in*)&addr);
         return make_aconnection(addr_hash, lconnection->port, sock);
       } else if(sock != EINTR || sock != EWOULDBLOCK) {
-        // FIXME: log error
+        logerror("get_next_connection:accept");
       }
     }
   }
