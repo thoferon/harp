@@ -1,9 +1,11 @@
 #include <check.h>
 
+#include <harp.h>
+
 #include <resolve.h>
 
 START_TEST (test_resolve_request_with_null_config) {
-  request_t *request = make_request(NULL, NULL, NULL, 0);
+  request_t *request             = make_request(NULL, NULL, NULL, 0);
   resolution_strategy_t strategy = resolve_request(request, NULL);
 
   ck_assert_int_eq(strategy, RESOLUTION_STRATEGY_400);
@@ -13,31 +15,32 @@ START_TEST (test_resolve_request_with_null_config) {
 END_TEST
 
 START_TEST (test_resolve_request_with_no_resolvers) {
-  request_t *request = make_request(NULL, NULL, NULL, 0);
-  config_t *config   = make_empty_config();
+  request_t *request    = make_request(NULL, NULL, NULL, 0);
+  harp_config_t *config = harp_make_empty_config();
 
   resolution_strategy_t strategy = resolve_request(request, config);
 
   ck_assert_int_eq(strategy, RESOLUTION_STRATEGY_500);
 
   free(request);
-  free_config(config);
+  harp_free_config(config);
 }
 END_TEST
 
 START_TEST (test_resolve_with_static_path_when_file_is_absent) {
-  request_info_t *request_info = make_request_info(strdup("/absent"), strdup("example.com"), 80);
+  request_info_t *request_info =
+    make_request_info(strdup("/absent"), strdup("example.com"), 80);
   request_t *request = make_request(request_info, NULL, strdup(""), 0);
 
-  resolver_t *resolver = make_static_path_resolver(strdup("/tmp"));
-  config_t *config = make_empty_config();
-  cons_resolver(resolver, config);
+  harp_resolver_t *resolver = harp_make_static_path_resolver(strdup("/tmp"));
+  harp_config_t *config     = harp_make_empty_config();
+  harp_cons_resolver(resolver, config);
 
   resolution_strategy_t strategy = resolve_request(request, config);
 
   ck_assert_int_eq(strategy, RESOLUTION_STRATEGY_404);
 
-  free_config(config);
+  harp_free_config(config);
   free_request(request);
 }
 END_TEST

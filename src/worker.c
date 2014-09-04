@@ -4,16 +4,17 @@
 
 #include <memory.h>
 #include <log.h>
-#include <list.h>
+#include <harp.h>
 #include <request.h>
-#include <primp_config/find.h>
+#include <harp_config/find.h>
 #include <connection_pool.h>
 #include <resolve.h>
+#include <start.h>
 
 #include <worker.h>
 
 worker_environment_t *make_worker_environment(
-    list_t *connection_pool, list_t *configs) {
+    harp_list_t *connection_pool, harp_list_t *configs) {
   worker_environment_t *worker_environment =
     (worker_environment_t*)smalloc(sizeof(struct worker_environment));
 
@@ -29,15 +30,18 @@ worker_environment_t *make_worker_environment(
 }
 
 void destroy_worker_environment(worker_environment_t *worker_environment,
-                                list_t *ports) {
-  pthread_mutex_destroy(worker_environment->mutex);
-  free(worker_environment->mutex);
-  destroy_connection_pool(worker_environment->connection_pool, ports);
-  free_list(worker_environment->configs, (free_function_t*)&free_config);
-  free(worker_environment);
+                                harp_list_t *ports) {
+  if(worker_environment != NULL) {
+    pthread_mutex_destroy(worker_environment->mutex);
+    free(worker_environment->mutex);
+    destroy_connection_pool(worker_environment->connection_pool, ports);
+    harp_free_list(worker_environment->configs,
+                   (harp_free_function_t*)&harp_free_config);
+    free(worker_environment);
+  }
 }
 
-void worker(worker_environment_t *env) {
+void *worker(worker_environment_t *env) {
 
 #define LOCK() do {                             \
     int rc = pthread_mutex_lock(env->mutex);    \
@@ -55,6 +59,8 @@ void worker(worker_environment_t *env) {
     }                                           \
   } while(0)
 
+  while(!global_ready);
+
   nfds_t n;
   struct pollfd *pollfds;
   LOCK();
@@ -65,19 +71,21 @@ void worker(worker_environment_t *env) {
     LOCK();
     if(!env->valid) {
       UNLOCK();
+      free(pollfds);
       pthread_exit(NULL);
     }
-    aconnection_t *aconnection = get_next_connection(env->connection_pool, pollfds, n);
+    aconnection_t *aconnection =
+      get_next_connection(env->connection_pool, pollfds, n);
     UNLOCK();
 
     if(aconnection != NULL) {
       request_t *request = create_request(aconnection);
       if(request != NULL) {
-        config_t *config = find_config(env->configs, request->info,
-                                       aconnection->addr_hash);
+        harp_config_t *config = find_config(env->configs, request->info,
+                                             aconnection->addr_hash);
         resolution_strategy_t strategy = resolve_request(request, config);
         execute_fallback_strategy(request->aconnection->socket, strategy);
-        free_config(config);
+        harp_free_config(config);
         destroy_request(request); // Destroys the aconnection as well
       } else {
         destroy_aconnection(aconnection);

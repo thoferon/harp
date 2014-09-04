@@ -1,13 +1,13 @@
 #include <config.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 
-#include <log.h>
 #include <memory.h>
 
 inline void check_pointer(char *name, void *ptr) {
   if(ptr == NULL) {
-    logerror(name);
+    perror(name);
     exit(EXIT_FAILURE);
   }
 }

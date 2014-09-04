@@ -8,10 +8,12 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #else
-#define PACKAGE_STRING "primp"
+#define PACKAGE_STRING "harp"
 #endif
 
+#include <memory.h>
 #include <log.h>
+#include <harp.h>
 
 #include <response.h>
 
@@ -65,11 +67,13 @@ int send_http_status(int socket, http_status_t status) {
   int count = asprintf(&str, "HTTP/1.1 %i %s\r\n", status_code, status_message);
   if(count == -1) {
     logerror("send_http_status:asprintf");
+    free(str);
     return -1;
   }
 
   int rc;
-  while((rc = send(socket, str, count, MSG_DONTWAIT)) == -1 && errno == EAGAIN);
+  while((rc = send(socket, str, count, MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
+        && errno == EAGAIN);
   free(str);
 
   if(rc == -1) {
@@ -84,7 +88,8 @@ int send_server_header(int socket) {
   char *server_header = "Server: " PACKAGE_STRING "\r\n";
   size_t server_header_len = strlen(server_header);
   int rc;
-  while((rc = send(socket, server_header, server_header_len, MSG_DONTWAIT)) == -1
+  while((rc = send(socket, server_header, server_header_len,
+                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
         && errno == EAGAIN);
   if(rc == -1) {
     logerror("send_server_header:send");
@@ -97,7 +102,8 @@ int send_connection_header(int socket) {
   char *connection_header = "Connection: close\r\n";
   size_t connection_header_len = strlen(connection_header);
   int rc;
-  while((rc = send(socket, connection_header, connection_header_len, MSG_DONTWAIT)) == -1
+  while((rc = send(socket, connection_header, connection_header_len,
+                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
         && errno == EAGAIN);
   if(rc == -1) {
     logerror("send_connection_header:send");
@@ -108,20 +114,25 @@ int send_connection_header(int socket) {
 
 int send_content_length_header(int socket, int content_length) {
   char *content_length_header;
-  int count = asprintf(&content_length_header, "Content-Length: %u\r\n", content_length);
+  int count = asprintf(&content_length_header, "Content-Length: %u\r\n",
+                       content_length);
   if(count == -1) {
     logerror("send_content_length:asprintf");
+    free(content_length_header);
     return -1;
   }
 
   int rc;
-  while((rc = send(socket, content_length_header, count, MSG_DONTWAIT)) == -1
+  while((rc = send(socket, content_length_header, count,
+                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
         && errno == EAGAIN);
+
+  free(content_length_header);
+
   if(rc == -1) {
     logerror("send_content_length_header:send");
     return -1;
   }
-  free(content_length_header);
 
   return 0;
 }
@@ -153,10 +164,14 @@ int send_content_type_header(int socket, mime_type_t mime_type) {
   }
 
   int rc;
-  while((rc = send(socket, content_type_header, count, MSG_DONTWAIT)) == -1
+  while((rc = send(socket, content_type_header, count,
+                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
         && errno == EAGAIN);
+
+  free(content_type_header);
+
   if(rc == -1) {
-    logerror("send_content_length:send");
+    logerror("send_content_type_header:send");
     return -1;
   }
 
@@ -165,7 +180,8 @@ int send_content_type_header(int socket, mime_type_t mime_type) {
 
 int send_extra_crlf(int socket) {
   int rc;
-  while((rc = send(socket, "\r\n", 2, MSG_DONTWAIT)) == -1 && errno == EAGAIN);
+  while((rc = send(socket, "\r\n", 2, MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
+        && errno == EAGAIN);
   if(rc == -1) {
     logerror("send_extra_crlf:send");
     return -1;
@@ -175,8 +191,14 @@ int send_extra_crlf(int socket) {
 
 mime_type_t get_mime_type(const char *path) {
   size_t len = strlen(path);
-  if(len >= 5 && strcmp(path + len - 5, ".html") == 0) { return MIME_TYPE_HTML; }
-  if(len >= 4 && strcmp(path + len - 4, ".css")  == 0) { return MIME_TYPE_CSS; }
-  if(len >= 3 && strcmp(path + len - 3, ".js")   == 0) { return MIME_TYPE_JAVASCRIPT; }
+  if(len >= 5 && strcmp(path + len - 5, ".html") == 0) {
+    return MIME_TYPE_HTML;
+  }
+  if(len >= 4 && strcmp(path + len - 4, ".css")  == 0) {
+    return MIME_TYPE_CSS;
+  }
+  if(len >= 3 && strcmp(path + len - 3, ".js")   == 0) {
+    return MIME_TYPE_JAVASCRIPT;
+  }
   return MIME_TYPE_UNKNOWN;
 }

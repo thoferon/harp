@@ -1,0 +1,783 @@
+\input texinfo @c -*-texinfo-*-
+@c %**start of header
+@setfilename harp.info
+@include version.texi
+@settitle Harp Manual, version @value{VERSION}
+@paragraphindent 0
+@c %**end of header
+
+@copying
+This document is the official manual for harp, version @value{VERSION}.
+It covers how to use the program, how to use libharp and how to contribute
+to the project.
+
+@quotation
+Copyright @copyright{} 2014, Thomas Feron
+
+This work is licensed under the Creative Commons Attribution 4.0 International
+License. To view a copy of this license, visit
+http://creativecommons.org/licenses/by/4.0/.
+@end quotation
+@end copying
+
+@titlepage
+@title Harp Manual
+@subtitle Version @value{VERSION}
+@author Thomas Feron
+
+@page
+@vskip 0pt plus 1fill
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top Harp Manual
+
+@insertcopying
+@end ifnottex
+
+@menu
+* Overview::            Overview of harp.
+* Installation::        How to install the program from sources.
+* Configuration::       Configuration file, command-line option and reloading.
+* Options::             Command-line options to run harp.
+* Error handling::      How harp will react to possible errors.
+* Libharp::             Basics for using libharp.
+* Contribution::        What you should know to contribute to the project.
+* Index::               Complete index.
+@end menu
+
+@node Overview
+@chapter Overview of harp
+
+Harp is an HTTP reverse proxy. It accepts HTTP connection and, based on the
+configuration, either proxies those requests to some upstream server or serve
+some local files.
+
+In addition, harp have two other important features. Firstly, a configuration
+can contain different possible ``paths'' which are chosen from based on a hash
+of the client's IP address. Secondly, some of those paths can be tagged in the
+configuration. The tags are sent to the upstream server as a comma-separated
+list with the @code{X-Tags} header. An example will explain it better:
+
+@example
+@{
+  hosts "127.0.0.1" "localhost";
+  ports 80;
+
+  [
+    3 @{
+      tag "feature1";
+      server "127.0.0.1" 3000;
+    @}
+
+    7 @{
+      server "127.0.0.1" 3001;
+    @}
+  ]
+@}
+@end example
+
+In this simple example, 30% of the traffic will be proxied to
+@code{127.0.0.1:3000} and the 70% remaining to @code{127.0.0.1:3001}. The first
+server will receive ``feature1'' in the @code{X-Tags} header. In reality, one
+would use either of these techniques but not both as it is redundant: either
+deploying different versions of the application on different servers/ports or
+having one server serving different versions depending of the tags.
+
+@node Installation
+@chapter Installation
+
+This chapter explains how to compile and install harp and libharp on your
+system.
+
+@menu
+* Disabling syslog::    Option to remove syslog from the code.
+* Tests::               How to run the test suite.
+* Execinfo::            Note related to libexecinfo.
+@end menu
+
+Once you downloaded @file{harp-@value{VERSION}.tar.gz}, it can be installed
+by running:
+
+@example
+$ cd /tmp
+$ tar xzf /path/to/harp-@value{VERSION}.tar.gz
+$ cd harp-@value{VERSION}
+$ ./configure
+$ make
+$ sudo make install
+@end example
+
+When compiling the source code from the repository, some files need to be
+downloaded or generated. Before running @command{./configure}, you need to run
+@samp{sh ./bootstrap}.
+
+@node Disabling syslog
+@section Disabling syslog
+
+@cindex syslog, disable syslog
+
+By passing @option{--disable-syslog} to @command{./configure}, all the
+syslog-related code is replaced by the preprocessor. The commands become:
+
+@example
+$ ./configure --disable-syslog
+$ make
+$ make install
+@end example
+
+Instead, harp will simply log to the standard error.
+
+@node Tests
+@section Running the tests
+
+Running the test suite before installing the program and the library can show
+some problems at an earlier step. It might be a good idea in your situation.
+Just run @command{make check}.
+
+@node Execinfo
+@section Execinfo
+
+@cindex execinfo, libexecinfo
+
+The testing program @command{check_memory_usage} in @file{tests/memory} runs the
+server and sends some requests. It shows any possible memory leaks at the end.
+
+If libexecinfo is installed on your system, harp will use @code{backtrace()} to
+display the address of the function having allocated the memory. If it's not
+installed, it will still compile but won't show any function address.
+
+@node Configuration
+@chapter Configuration
+
+@menu
+* Grammar::             Formal grammar.
+* Directives::          The usable directives in a configuration.
+* Examples::            Full examples.
+* Option and signal::   Option to load a configuration and signal to reload it.
+@end menu
+
+@node Grammar
+@section Configuration grammar
+
+@cindex grammar
+
+@example
+       <config> ::= '@{' <config-items> <choice-groups> '@}'
+
+ <config-items> ::= <filter>   <config-items>
+                  | <tag>      <config-items>
+                  | <resolver> <config-items>
+                  | <empty>
+
+       <filter> ::= "hostnames" <hostnames> ';'
+                  | "ports"     <ports>     ';'
+
+          <tag> ::= "tag" <string> ';'
+
+     <resolver> ::= "static-path" <string>          ';'
+                  | "server"      <string> <number> ';'
+
+    <hostnames> ::= <string> <hostnames>
+                  | <empty>
+
+        <ports> ::= <number> <ports>
+                  | <empty>
+
+<choice-groups> ::= <choice-group> <choice-groups>
+                  | <empty>
+
+ <choice-group> ::= '[' <choices> ']'
+
+      <choices> ::= <choice> <choices>
+                  | <empty>
+
+       <choice> ::= <number> <config>
+
+       <string> ::= '"' <characters> '"'
+@end example
+
+@node Directives
+@section Directives
+
+@menu
+* hostnames::   Filter by hostnames.
+* ports::       Filter by ports.
+* tag::         Send tag to upstream servers.
+* static-path:: Resolve by serving static files.
+* server::      Resolve by proxying the request to an upstream server.
+@end menu
+
+@node hostnames
+@subsection hostnames
+
+@cindex hostnames (directive)
+
+@example
+hostnames "hostname1" "hostname2" [...];
+@end example
+
+The directive @code{hostnames} filters the requests by the value of the
+@code{Hostname} HTTP header. The request's hostname should be one in the list.
+
+@node ports
+@subsection ports
+
+@cindex ports (directive)
+
+@example
+ports 80 81 [...];
+@end example
+
+The directive @code{ports} filters the requests by port. The combination of all
+ports in the configurations (remember there can be several configurations in a
+configuration file) determines on what ports will harp be listening.
+A request matches a configuration if the port is listed in this filter.
+
+@node tag
+@subsection tag
+
+@cindex tag (directive)
+
+@example
+tag "example";
+@end example
+
+When proxying a request (see @ref{server}), the tags are sent to the upstream
+server as a comma-separated list in the @code{X-Tags} HTTP header. In the case
+of nested configurations, the tags from the levels above are sent as well.
+
+@node static-path
+@subsection static-path
+
+@cindex static, static file
+@cindex static-path (directive)
+
+@quotation Warning
+This feature is pretty basic and it is NOT recommended to use for production
+websites.
+@end quotation
+
+@example
+static-path "/path/to/dir";
+@end example
+
+This directive attempts to resolve requests by serving files from the file
+system. In the example above, a request to @file{/example} will be served with
+the content of @file{/path/to/dir/example}. If it is a directory, harp will
+look for @file{/path/to/dir/example/index.html} and
+@file{/path/to/dir/example/index.htm}. It will set the @code{Content-Type}
+header for only a few recognised file extensions.
+
+@node server
+@subsection server
+
+@cindex server (directive)
+
+@example
+server "hostname" 3000;
+@end example
+
+The directive @code{server} proxies the request to an upstream server with
+possible tags (see @ref{tag}). It takes the hostname of IP address of the
+server and the port on which to connect. Apart from the header @code{X-Tags},
+the request is transmitted as it has been received without any modification.
+
+@node Examples
+@section Full examples
+
+This chapter shows different possible strategies to configure harp.
+
+@menu
+* Static files::                Serving static files.
+* Different servers::           One upstream server per version.
+* Feature flagging::            One upstream receiving tags.
+* Nested configurations::       Several levels of configuration.
+* Several applications::        Using harp for several applications.
+@end menu
+
+@node Static files
+@subsection Static files
+
+Harp can be used to serve static files even though the support for static files
+is pretty basic. It's probably a better idea not to use it for production
+environments. It is pretty straightforward:
+
+@example
+@{
+  hostnames "www.example.com";
+  ports 80;
+
+  static-path "/var/www/example";
+@}
+@end example
+
+@node Different servers
+@subsection Different servers
+
+One possibility is to deploy every different versions of the application on
+different servers and/or ports. Harp could then be used to despatch between the
+versions.
+
+In this example, we have two versions deployed on the same host where harp is
+running on ports 3000 and 3001 respectively. One user in five should be served
+the version on port 3001. Here is how to do it:
+
+@example
+@{
+  hosts "www.example.com";
+  ports 80;
+
+  [
+    4 @{
+      server "localhost" 3000;
+    @}
+
+    1 @{
+      server "localhost" 3001;
+    @}
+  ]
+@}
+@end example
+
+@node Feature flagging
+@subsection Feature flagging
+
+@cindex feature flagging, flag
+
+With one server for the application, it's possible to use feature flagging in
+the souce code and let harp send the flags (called tags in harp).
+
+To illustrate this, let's consider an application running on port 3000 on the
+same host. In order to test a new feature, one user in ten should be able to use
+it. The application shall enable the feature when receiving the tag
+@code{feature1} in the @code{X-Tags} header.
+
+@example
+@{
+  hostnames "www.example.com";
+  ports 80;
+
+  server "localhost" 3000;
+
+  [
+    1 @{
+      tag "feature1";
+    @}
+
+    9 @{ @}
+  ]
+@}
+@end example
+
+@node Nested configurations
+@subsection Nested configurations
+
+@cindex nested configuration, nesting
+
+There is no limit to the level of nesting the configuration can reach. Here is
+an example of a perfectly valid configuration file.
+
+@example
+@{
+  hostnames "www.example.com";
+  ports 80;
+
+  server "localhost" 3000;
+
+  [
+    2 @{
+      tag "feature1";
+
+      [
+        1 @{ tag "variant1"; @}
+        1 @{ tag "variant2"; @}
+      ]
+    @}
+
+    1 @{
+      tag "basic";
+    @}
+  ]
+@}
+@end example
+
+@node Several applications
+@subsection Several applications
+
+Configurations and configuration files are not to be confused.
+A configuration file can contain several configurations as described in this
+grammar. Harp will loop through the configurations until it finds one that
+matches. The different configurations just need to follow each other.
+
+@node Option and signal
+@section Option and signal
+
+@cindex SIGUSR1
+@cindex signal
+
+By default, harp will load the configuration from a path like
+@file{/usr/local/etc/harp.conf} (on OpenBSD) or something similar depending
+on your system. You can see it by running @command{harp --help}.
+
+To specify a different file, run
+
+@example
+$ harp --config-path /another/path.conf
+@end example
+
+or
+
+@example
+$ harp -c /another/path.conf
+@end example
+
+When harp is already running, it reloads the configuration file when receiving
+the signal SIGUSR1. Simply run
+
+@example
+$ pkill -s SIGUSR1 harp
+@end example
+
+@node Options
+@chapter Options
+
+This chapter covers the different command-line options one which can be passed
+to harp.
+
+@menu
+* Daemon::               Options to run harp as a daemon.
+* Other options::        Other options.
+@end menu
+
+@node Daemon
+@section Run as a daemon
+
+@cindex daemon
+@cindex background (option)
+@cindex user (option)
+@cindex group (option)
+@cindex chroot (option)
+
+To run harp as a daemon, you first need to detach it, i.e. make it create its
+own process group. This can be achieved with the @option{--background} or
+@option{-b}.
+
+On most systems, to bind on ports under 1024, harp needs to run as the
+superuser. Of course, the server shouldn't run with those privileges. In order
+to avoid this, harp should be told to change user and group. The options
+@option{--user} (or @option{-u}) and @option{--group} (or @option{-g}) sets,
+respectively, the user ID and the group ID of the process.
+
+If the group is not specified but the user is, the process will change the group
+to the one having the same name as the user. Note that the specified user should
+be able to change to the given group.
+
+Finally, the option @anchor{chroot}@option{--chroot} is used to change the
+process' root directory. See chroot(2). When used, remember the path to the
+configuration file should be relative to the chroot directory as well as any
+@samp{static-path} directive, event relative paths as the working directory is
+set to root directory once @code{chroot()} has been called.
+
+@node Other options
+@section Other options
+
+@cindex syslog, syslog facility
+@cindex help (option)
+@cindex version (option)
+@cindex config-path (option)
+@cindex thread-number (option)
+
+For the sake of comprehension, let's just say the options @option{--help}
+(or @option{-h}) and @option{--version} (or @option{-V}) are pretty
+self-explanatory.
+
+So are the options @option{config-path} or @option{-c} though some
+ considerations should be made, see @ref{Option and signal} and
+@ref{chroot, ,@option{--chroot}}.
+
+To change the syslog facility, use @option{--syslog-facility} with the following
+possible values: @samp{auth}, @samp{authpriv}, @samp{cron}, @samp{daemon},
+@samp{ftp}, @samp{kern}, @samp{lpr}, @samp{mail}, @samp{news}, @samp{syslog},
+@samp{user}, @samp{local0}, @samp{local1}, @samp{local2}, @samp{local3},
+@samp{local4}, @samp{local5}, @samp{local6} and @samp{local7}.
+
+If not specified, harp uses the default facility, see syslog(3). Also, this
+option is not available if harp was compiled with @option{--disable-syslog}.
+
+Harp starts workers as threads. A worker can handle one request at a time.
+Therefore, the number of threads sets the number of concurrent requests that the
+server can handle. The options @option{--thread-number} or @option{-n} is used
+just for this purpose.
+
+@node Error handling
+@chapter Error handling
+
+@cindex errors
+
+This chapter explains how harp reacts to errors that might happen while
+processing requests. This table summarises the behaviour for every possible
+cases.
+
+In case there are several resolvers (e.g. @code{static-path} or @code{server}),
+the request will go through every one of them in order until one succeeds. If
+all of them fail, the last one decides how to handle the error. For instance, if
+the first resolver fails with an error code corresponding to a 404 and the
+second one fails with an error code corresponding to a 502, a 502 will be sent
+back to the cient.
+
+@multitable @columnfractions .53 .30 .17
+@headitem Scenario @tab Behaviour @tab Log message?
+@item No matching configuration
+@tab 400 Bad Request
+@tab No
+@item No resolver in the configuration
+@tab 500 Internal Error
+@tab No
+
+@headitem When resolving with static-path
+@item The file does not exist
+@tab 404 Not Found
+@tab No
+@item Error when calling stat() on the path
+@tab 500 Internal Error
+@tab Yes
+@item Error when sending data
+@tab Close the connection
+@tab Yes
+
+@headitem When resolving with server
+@item Can't resolve the server (getaddrinfo())
+@tab 502 Bad Gateway
+@tab Yes
+@item Error when creating the socket
+@tab 500 Internal Error
+@tab Yes
+@item Can't connect to the upstream server
+@tab 502 Bad Gateway
+@tab No
+@item The server takes too long to respond
+@tab 504 Gateway Timeout
+@tab No
+@item Error when polling the connection (poll())
+@tab 500 Internal Error
+@tab Yes
+@item Error when making the socket non-blocking (fcntl())
+@tab 500 Internal Error
+@tab Yes
+@item Can't parse request to add the tags
+@tab Ignore, no tags added
+@tab No
+@item Error when sending data to the client
+@tab Close the connection
+@tab No
+@end multitable
+
+@node Libharp
+@chapter Libharp
+
+@cindex libharp
+
+The library libharp allows to read, create and write configurations for harp.
+This chapter explains the basics to develop with this library.
+
+To use it, you should compile with @option{-lharp} (for GCC) and use
+@code{#include <harp.h>} wherever the code is calling libharp.
+
+For more detailed information about any functions, see the man pages.
+
+@menu
+* Errors::                    Dealing with errors.
+* Lists::                     API for lists.
+* Build configurations::      All the functions in a concise table.
+* Read and write::            How to read and write configurations to/from file.
+@end menu
+
+@node Errors
+@section Errors
+
+Libharp mimics the standard library when handling errors: Functions that can
+fail return an error code (e.g. @code{-1}), a @code{NULL} pointer or something
+else depending on the function and set @code{harp_errno}. The calling code can
+thereafter call @code{harp_strerror()} passing it the error number to get an
+error message. @code{harp_errno} is either the value of @code{errno} or an
+negative error number specific to libharp.
+
+@quotation Warning
+This API is not thread-safe. A racing condition between two threads calling
+functions of the library could lead to wrong error messages.
+@end quotation
+
+A typical call to the library will resemble the following:
+
+@example
+// ...
+int rc = harp_write_configs(configs, "/some/path.conf");
+if(rc == -1) @{
+  fprintf(stderr, "harp_write_configs: %s\n",
+          harp_strerror(harp_errno));
+  return -1;
+@}
+// ...
+@end example
+
+@node Lists
+@section Lists
+
+The API makes an extensive use of lists which this section will cover. Let's
+start with an example:
+
+@example
+struct thing element1, element2, element3;
+
+// ...
+
+harp_list_t *list1 = harp_cons(&element1, harp_singleton(&element2));
+harp_list_t *list2 = harp_singleton(&element3);
+
+harp_list_t *list = harp_concat(list1, list2);
+
+harp_list_t *current;
+HARP_LISTFOREACH(current, list) @{
+  struct thing *element = (struct thing*)current->element;
+
+  // do something
+
+  if(current->next != HARP_EMPTY_LIST) @{
+    // do something except for the last element
+  @}
+@}
+
+// ...
+@end example
+
+Here is how lists are reprensented in memory:
+
+@example
+#define HARP_EMPTY_LIST NULL
+
+typedef struct harp_list @{
+  void *element;
+  struct harp_list *next;
+@} harp_list_t;
+@end example
+
+A list is data structure pointing to an element of any type (typically it is
+then casted in the code) and the next node, or @code{HARP_EMPTY_LIST} if there
+is none.
+
+In order to build lists, you can use @code{harp_singleton(void *)} to create a
+one-element list, @code{harp_cons(void *, harp_list_t *)} to prepend a new
+element at the beginning, @code{harp_concat(harp_list_t *, harp_list_t *)} to
+concatenate two lists and @code{harp_append(harp_list_t *, void *)} to append
+a new element at the end. Note that those functions reuse the lists they are
+given. Therefore, freeing the memory of one list will be free part of or
+the entirety of the others. To avoid this problem,
+@code{harp_duplicate(harp_list_t *, harp_duplicate_function_t *)} duplicates
+a list and its elements if a duplication function is passed. Also,
+@code{harp_append()} and @code{harp_concat()} modifies the list (the first for
+@code{harp_concat()}) they are given. All these functions return a pointer to
+the resulting list.
+
+@code{harp_last(harp_list_t *)} and @code{harp_length(harp_list_t *)} are
+query functions and return, respectively, a pointer to the last node and the
+number of elements as an @code{int}.
+
+@code{harp_free_list(harp_list_t *, harp_free_function_t *)} recursively
+traverse the list and free all the node. If a function pointer is passed, it is
+used to free the elements of the list as well.
+
+@code{harp_find_element(harp_list_t *, harp_predicate_function_t *)} returns
+the node for which the element matches the predicate. The predicate function
+takes a pointer to an element and returns a @code{bool}. If none matches, it
+returns @code{HARP_EMPTY_LIST}.
+
+Finally, @code{HARP_LIST_FOR_EACH(varname, list)} is a helper macro to loop
+over a list's elements. The example above shows how to use it.
+
+@node Build configurations
+@section Build configurations
+
+The API to build configuration is a bit larger than the one for lists and is
+more likely to change so that only the core principles are covered in this
+section. Please see the man pages for more details.
+
+A series of function is available to construct configurations for harp. It all
+starts with @code{pimp_make_empty_config()} which, as the name says, returns a
+pointer to a new empty configuration (@code{harp_config_t *}). Similar
+functions creates filters and resolvers and start with @code{harp_make_}. These
+functions allocate memory for the structure. It is the responsibility of the
+developer to free it.
+
+Functions starting with @code{harp_free_} free the memory allocated by other
+functions recursively. For instance, @code{harp_free_config(harp_config_t *)}
+deallocates the memory of the @code{struct harp_config} and recurses to free
+all filters, resolvers, etc. Typically, some code builds a configuration and
+free it in one function call.
+
+Once filters, resolvers or others have been created, they can be added to a
+configuration with the functions starting with @code{harp_cons_}.
+@code{harp_cons_tag(char *, harp_config_t *)} takes the tag directly and does
+not any @code{harp_make_} function. Also, remember that a choice group is
+simply a list of choices. Hence, adding a choice group will look like this:
+
+@example
+// ...
+harp_config_t *config = harp_make_empty_config();
+
+harp_config_t *subconfig1 = harp_make_empty_config();
+harp_config_t *subconfig2 = harp_make_empty_config();
+
+// We need strdup() because free_config() will free the tags
+harp_cons_tag(strdup("v1"), subconfig1);
+harp_cons_tag(strdup("v2"), subconfig2);
+
+harp_choice_t *choice1 = harp_make_choice(3, subconfig1);
+harp_choice_t *choice2 = harp_make_choice(7, subconfig2);
+harp_list_t *choice_group =
+  harp_cons(choice1, harp_singleton(choice2));
+
+harp_cons_choice_group(choice_group, config);
+// ...
+@end example
+
+@code{harp_duplicate_filter()} and @code{harp_duplicate_resolver()} are the
+only ones of their kinds and are used by harp while processing requests. There
+may be more of them in the future.
+
+Finally, @code{harp_get_ports(harp_list_t *)} is also used by harp to connect
+to the relevant ports when starting or reloading the configuration (see
+@ref{Option and signal}). It returns a list (@code{harp_list_t *}) of all the
+ports found anywhere in the configurations given as parameter.
+
+@node Read and write
+@section Read and write
+
+Reading and writing configurations from file is easy with
+@code{harp_read_configs()} and @code{harp_write_configs()}. Remember that a
+configuration can contain several configurations.
+
+@code{harp_read_configs(char *)} takes the path to a configuration file and
+returns a pointer to the list of parsed configurations. If an error occurs, it
+returns a @code{NULL} pointer and set @code{harp_errno} (see @ref{Errors}).
+
+@code{harp_write_configs(harp_list_t *, char *)} takes the list of
+configurations to write and the path of the file to write them to. It returns
+@code{0} if successful and @code{-1} otherwise (and also sets
+@code{harp_errno}).
+
+@node Contribution
+@chapter Contribution
+
+TODO
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye

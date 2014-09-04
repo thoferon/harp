@@ -17,8 +17,7 @@
 #include <memory.h>
 #include <log.h>
 #include <request.h>
-#include <primp_config.h>
-#include <list.h>
+#include <harp.h>
 #include <response.h>
 
 #include <resolve.h>
@@ -36,13 +35,14 @@ inline int ssend(int sock, char *buf, ssize_t count) {
     pollfds[0].fd     = sock;
     pollfds[0].events = POLLOUT;
 
-    int rc = poll(pollfds, 1, 3 * 60 * 1000);
+    int rc = poll(pollfds, 1, 30 * 1000);
     switch(rc) {
     case -1: return -1;
     case 0:  return -2;
     }
 
-    ssize_t count2 = send(sock, buf + written, count - written, MSG_DONTWAIT);
+    ssize_t count2 = send(sock, buf + written, count - written,
+                          MSG_DONTWAIT | MSG_NOSIGNAL);
     if(count2 == -1) {
       if(errno == EAGAIN) {
         continue;
@@ -57,22 +57,24 @@ inline int ssend(int sock, char *buf, ssize_t count) {
   return 1;
 }
 
-resolution_strategy_t resolve_request(request_t *request, config_t *config) {
+resolution_strategy_t resolve_request(request_t *request,
+                                      harp_config_t *config) {
   if(config == NULL) {
     return RESOLUTION_STRATEGY_400;
   }
 
   resolution_strategy_t strategy = RESOLUTION_STRATEGY_500;
 
-  list_t *current;
-  LISTFOREACH(current, config->resolvers) {
-    resolver_t *resolver = (resolver_t*)current->element;
+  harp_list_t *current;
+  HARP_LIST_FOR_EACH(current, config->resolvers) {
+    harp_resolver_t *resolver = (harp_resolver_t*)current->element;
     switch(resolver->type) {
-    case RESOLVER_TYPE_STATIC_PATH:
-      strategy = resolve_with_static_path(request, resolver->static_path);
+    case HARP_RESOLVER_TYPE_STATIC_PATH:
+      strategy =
+        resolve_with_static_path(request, resolver->static_path);
       break;
-    case RESOLVER_TYPE_SERVER:
-      strategy = resolve_with_server(request, resolver->server);
+    case HARP_RESOLVER_TYPE_SERVER:
+      strategy = resolve_with_server(request, resolver->server, config);
       break;
     }
     if(strategy == 0) { break; }
@@ -127,14 +129,15 @@ void execute_fallback_strategy(int socket, resolution_strategy_t strategy) {
 
 // This is supposed to stay really basic.
 // The recommended way should be to proxy every requests.
-resolution_strategy_t resolve_with_static_path(request_t *request, char *static_path) {
+resolution_strategy_t resolve_with_static_path(request_t *request,
+                                               char *static_path) {
   int rc;
 
   size_t static_path_len  = strlen(static_path);
   size_t request_path_len = strlen(request->info->path);
 
-  // + 12 for '\0' and /index.html
-  char *local_path = (char*)smalloc(static_path_len + request_path_len + 12);
+  char *local_path = (char*)smalloc(static_path_len + request_path_len
+                                    + strlen("/index.html") + 1);
   memcpy(local_path, static_path, static_path_len);
   memcpy(local_path + static_path_len, request->info->path, request_path_len);
   local_path[static_path_len + request_path_len] = '\0';
@@ -153,13 +156,15 @@ resolution_strategy_t resolve_with_static_path(request_t *request, char *static_
   if(S_ISDIR(dirstat.st_mode) == 0) {
     f = fopen(local_path, "r");
   } else {
-    memcpy(local_path + static_path_len + request_path_len, "/index.htm", 10);
-    local_path[static_path_len + request_path_len + 10] = '\0';
+    memcpy(local_path + static_path_len + request_path_len,
+           "/index.html", strlen("/index.html"));
+    local_path[static_path_len + request_path_len
+               + strlen("/index.html")] = '\0';
     f = fopen(local_path, "r");
 
     if(f == NULL) {
-      local_path[static_path_len + request_path_len + 10] = 'l';
-      local_path[static_path_len + request_path_len + 11] = '\0';
+      local_path[static_path_len + request_path_len
+                 + strlen("/index.htm")] = '\0';
       f = fopen(local_path, "r");
     }
   }
@@ -196,11 +201,12 @@ resolution_strategy_t resolve_with_static_path(request_t *request, char *static_
   int count;
   char buffer[READ_BUFFER_SIZE];
   while((count = fread(&buffer, 1, READ_BUFFER_SIZE, f)) > 0) {
-    while((rc = send(socket, buffer, count, MSG_DONTWAIT)) == -1 && errno == EAGAIN);
+    while((rc = send(socket, buffer, count, MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
+          && errno == EAGAIN);
     if(rc == -1) {
       logerror("resolve_with_static_path:send");
       CLOSEFILE();
-      return RESOLUTION_STRATEGY_500;
+      return RESOLUTION_STRATEGY_CLOSE;
     }
   }
   // FIXME: Check errors with ferror()
@@ -242,9 +248,12 @@ int proxy(int from, int to) {
   }
 }
 
-resolution_strategy_t resolve_with_server(request_t *request, server_t *server) {
-  int sock;
-  int rc;
+resolution_strategy_t send_x_tags_header(int, harp_list_t *);
+
+resolution_strategy_t resolve_with_server(request_t *request,
+                                          harp_server_t *server,
+                                          harp_config_t *config) {
+  int rc, sock;
 
   struct addrinfo hints, *addrinfos, *current;
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -252,7 +261,7 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags    = AI_PASSIVE | AI_NUMERICSERV;
 
-  char *port_string = (char*)smalloc(6);
+  char port_string[6];
   snprintf(port_string, 6, "%i", server->port);
 
   while((rc = getaddrinfo(server->hostname, port_string, &hints, &addrinfos))
@@ -271,9 +280,11 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
   if(addrinfos != NULL) {
     rc = -1;
     for(current = addrinfos; current != NULL; current = current->ai_next) {
-      sock = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
+      sock = socket(current->ai_family, current->ai_socktype,
+                    current->ai_protocol);
       if(sock == -1) {
         logerror("resolve_with_server:socket");
+        freeaddrinfo(addrinfos);
         return RESOLUTION_STRATEGY_500;
       }
 
@@ -284,12 +295,14 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
         pollfds[0].fd     = sock;
         pollfds[0].events = POLLOUT;
 
-        rc = poll(pollfds, 1, 3 * 60 * 1000);
+        rc = poll(pollfds, 1, 30 * 1000);
 
         if(rc == -1) {
           logerror("resolve_with_server:poll");
+          freeaddrinfo(addrinfos);
           RETURNERROR(RESOLUTION_STRATEGY_500);
         } else if(rc == 0) {
+          freeaddrinfo(addrinfos);
           RETURNERROR(RESOLUTION_STRATEGY_504);
         }
       }
@@ -322,7 +335,35 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
     RETURNERROR(RESOLUTION_STRATEGY_500);
   }
 
-  rc = ssend(sock, request->buffer, request->buffer_size);
+  // Transfer
+
+  char *buffer_remaining       = request->buffer;
+  size_t buffer_remaining_size = request->buffer_size;
+
+  int i;
+  for(i = 0; i < request->buffer_size; i++) {
+    if(request->buffer[i] == '\r' && request->buffer[i+1] == '\n') {
+      rc = ssend(sock, request->buffer, i + 2);
+      if(rc == -1) {
+        logerror("resolve_with_request:ssend");
+        RETURNERROR(RESOLUTION_STRATEGY_502);
+      }
+      if(rc == -2) {
+        RETURNERROR(RESOLUTION_STRATEGY_504);
+      }
+      buffer_remaining      += i + 2;
+      buffer_remaining_size -= i + 2;
+
+      resolution_strategy_t strategy = send_x_tags_header(sock, config->tags);
+      if(strategy != 0) {
+        RETURNERROR(strategy);
+      }
+
+      break;
+    }
+  }
+
+  rc = ssend(sock, buffer_remaining, buffer_remaining_size);
   if(rc == -1) {
     logerror("resolve_with_request:ssend");
     RETURNERROR(RESOLUTION_STRATEGY_502);
@@ -343,7 +384,7 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
     pollfds[1].fd     = request->aconnection->socket;
     pollfds[1].events = rc2 == 0 ? 0 : POLLIN;
 
-    rc = poll(pollfds, 2, 3 * 60 * 1000);
+    rc = poll(pollfds, 2, 30 * 1000);
     if(rc == -1) {
       logerror("resolve_with_server:poll");
       RETURNERROR2(RESOLUTION_STRATEGY_500);
@@ -370,6 +411,58 @@ resolution_strategy_t resolve_with_server(request_t *request, server_t *server) 
     }
 
   } while(rc1 != 0 || rc2 != 0);
+
+  rc = close(sock);
+  if(rc != 0) {
+    logerror("resolve_withserver:close");
+  }
+
+  return 0;
+}
+
+resolution_strategy_t send_x_tags_header(int socket, harp_list_t *tags) {
+  int rc;
+  harp_list_t *current;
+
+  size_t list_len = 0;
+  HARP_LIST_FOR_EACH(current, tags) {
+    char *tag = (char*)current->element;
+    list_len += strlen(tag);
+    if(current->next != HARP_EMPTY_LIST) {
+      list_len += strlen(",");
+    }
+  }
+
+  char *header_prefix = "X-Tags: ";
+  size_t size = strlen(header_prefix) + list_len + strlen("\r\n");
+  char *x_tags_header = (char*)smalloc(size);
+  size_t so_far = 0;
+
+  strncpy(x_tags_header, header_prefix, size - so_far);
+  so_far += strlen(header_prefix);
+
+  HARP_LIST_FOR_EACH(current, tags) {
+    char *tag = (char*)current->element;
+    strncat(x_tags_header + so_far, tag, size - so_far);
+    so_far += strlen(tag);
+    if(current->next != HARP_EMPTY_LIST) {
+      x_tags_header[so_far++] = ',';
+    }
+  }
+
+  strncat(x_tags_header + so_far, "\r\n", size - so_far);
+  so_far += 2;
+
+  while((rc = send(socket, x_tags_header, size,
+                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
+        && errno == EAGAIN);
+
+  free(x_tags_header);
+
+  if(rc == -1) {
+    logerror("send_x_tags_header:send");
+    return RESOLUTION_STRATEGY_502;
+  }
 
   return 0;
 }

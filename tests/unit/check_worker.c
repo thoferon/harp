@@ -2,21 +2,22 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include <list.h>
+#include <harp.h>
 #include <worker.h>
 
 START_TEST (test_make_and_destroy_worker_environment) {
-  worker_environment_t *env = make_worker_environment(123, 456);
+  worker_environment_t *env =
+    make_worker_environment((harp_list_t*)123, (harp_list_t*)456);
 
   ck_assert(env->valid           == true);
-  ck_assert(env->connection_pool == 123);
-  ck_assert(env->configs         == 456);
+  ck_assert(env->connection_pool == (harp_list_t*)123);
+  ck_assert(env->configs         == (harp_list_t*)456);
 
   ck_assert_int_eq(pthread_mutex_lock(env->mutex), 0);
 
   // Clean it before destoy it
-  env->connection_pool = EMPTY_LIST;
-  env->configs         = EMPTY_LIST;
+  env->connection_pool = HARP_EMPTY_LIST;
+  env->configs         = HARP_EMPTY_LIST;
 
   destroy_worker_environment(env, false);
 }

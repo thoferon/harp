@@ -24,11 +24,12 @@ SEMICOLON   ";"
 
 DHOSTNAMES  "hostnames"
 DPORTS      "ports"
+DTAG        "tag"
 DSTATICPATH "static-path"
 DSERVER     "server"
 
 NUMBER      [0-9]+
-STRING      \"(\\\"|[^\"])*\"
+STRING      \"(\\\\|\\\"|[^\\\"])*\"
 
 %%
 {LBRACE}      { return '{'; }
@@ -40,13 +41,14 @@ STRING      \"(\\\"|[^\"])*\"
 
 {DHOSTNAMES}  { return TOKEN_DHOSTNAMES; }
 {DPORTS}      { return TOKEN_DPORTS; }
+{DTAG}        { return TOKEN_DTAG; }
 {DSTATICPATH} { return TOKEN_DSTATICPATH; }
 {DSERVER}     { return TOKEN_DSERVER; }
 
 {NUMBER}      { put_number(yyscanner); return TOKEN_NUMBER; }
 {STRING}      { put_string(yyscanner); return TOKEN_STRING; }
 
-.             { printf("Bad character '%s' at line %d\n", yyget_text(yyscanner), yyget_lineno(yyscanner)); return *yyget_text(yyscanner); }
+.             { fprintf(stderr, "Bad character '%s' at line %d\n", yyget_text(yyscanner), yyget_lineno(yyscanner)); return *yyget_text(yyscanner); }
 %%
 
 void put_number(yyscan_t yyscanner) {

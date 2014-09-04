@@ -1,0 +1,41 @@
+Harp is an HTTP reverse proxy choosing between different configurations based
+on the IP address of the client. It can be used to implement simple A/B testing.
+
+This README contains a summary of what is to know to start. For more information
+about this program, please read the documentation.
+
+# Installation
+
+This should be enough to compile and install the project on most systems:
+
+$ cd /tmp
+$ tar xzf /path/to/harp-VERSION.tar.gz
+$ cd harp-VERSION
+$ ./configure
+$ make
+$ sudo make install
+
+# Configuration
+
+To see an exammple, have a look at example.conf at the root of the project.
+
+# Documentation
+
+`make install` installs the documentation on your system. You can access it by
+running `info harp`.
+
+If harp is not installed, you can still generate it with one of the following
+commands. The output file will be in doc/.
+
+make info
+make html
+make dvi
+make ps
+
+# License and contribution
+
+The project is licensed under the BSD3 license. You can see it in LICENSE in the
+root directory.
+
+Contributions are most welcome and you can get more information about it in the
+documentation.

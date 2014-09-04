@@ -14,10 +14,9 @@
 
 #include <memory.h>
 #include <log.h>
-#include <list.h>
+#include <harp.h>
 #include <connection_pool.h>
 
-// FIXME: This should be overwritable by a top-level directive in the config
 #define MAXCONN 128
 
 /*
@@ -25,17 +24,19 @@
  */
 
 lconnection_t *make_lconnection(int port, int socket) {
-  lconnection_t *lconnection = (lconnection_t*)smalloc(sizeof(struct lconnection));
-  lconnection->port          = port;
-  lconnection->socket        = socket;
+  lconnection_t *lconnection =
+    (lconnection_t*)smalloc(sizeof(struct lconnection));
+  lconnection->port   = port;
+  lconnection->socket = socket;
   return lconnection;
 }
 
 aconnection_t *make_aconnection(unsigned int addr_hash, int port, int socket) {
-  aconnection_t *aconnection = (aconnection_t*)smalloc(sizeof(struct aconnection));
-  aconnection->addr_hash     = addr_hash;
-  aconnection->port          = port;
-  aconnection->socket        = socket;
+  aconnection_t *aconnection =
+    (aconnection_t*)smalloc(sizeof(struct aconnection));
+  aconnection->addr_hash = addr_hash;
+  aconnection->port      = port;
+  aconnection->socket    = socket;
   return aconnection;
 }
 
@@ -55,16 +56,17 @@ inline void free_aconnection(aconnection_t *aconnection) {
  * Networking functions
  */
 
-list_t *create_connection_pool(list_t *ports, list_t *old_connection_pool) {
-  list_t *lconnections = EMPTY_LIST;
-  list_t *current;
+harp_list_t *create_connection_pool(harp_list_t *ports,
+                                     harp_list_t *old_connection_pool) {
+  harp_list_t *lconnections = HARP_EMPTY_LIST;
+  harp_list_t *current;
 
-  LISTFOREACH(current, ports) {
+  HARP_LIST_FOR_EACH(current, ports) {
     int port = *((int*)current->element);
 
     lconnection_t *new_connection = NULL;
-    list_t *current2;
-    LISTFOREACH(current2, old_connection_pool) {
+    harp_list_t *current2;
+    HARP_LIST_FOR_EACH(current2, old_connection_pool) {
       lconnection_t *old_connection = (lconnection_t*)current2->element;
       if(old_connection->port == port) {
         new_connection = old_connection;
@@ -78,9 +80,10 @@ list_t *create_connection_pool(list_t *ports, list_t *old_connection_pool) {
 
     if(new_connection != NULL) {
       // Order does not matter
-      lconnections = cons(new_connection, lconnections);
+      lconnections = harp_cons(new_connection, lconnections);
     } else {
-      free_list(lconnections, (free_function_t*)&destroy_lconnection);
+      harp_free_list(lconnections,
+                      (harp_free_function_t*)&destroy_lconnection);
       return NULL;
     }
   }
@@ -97,10 +100,10 @@ lconnection_t *create_lconnection(int port) {
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags    = AI_PASSIVE | AI_NUMERICSERV;
 
-  char *port_string = (char*)smalloc(6);
+  char port_string[6];
   snprintf(port_string, 6, "%i", port);
 
-  // FIXME: The hostname should be overwritable in the config (as a top-level directive)
+  // FIXME: The hostname should be overwritable in the options
   while((rc = getaddrinfo(NULL, port_string, &hints, &addrinfos)) == EAI_AGAIN);
   if(rc != 0) {
     logmsg(LOG_ERR, "create_connection:getaddrinfo: %s\n", gai_strerror(rc));
@@ -116,9 +119,11 @@ lconnection_t *create_lconnection(int port) {
   if(addrinfos != NULL) {
     rc = -1;
     for(current = addrinfos; current != NULL; current = current->ai_next) {
-      sock = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
+      sock = socket(current->ai_family, current->ai_socktype,
+                    current->ai_protocol);
       if(sock == -1) {
         logerror("create_connnection:socket");
+        freeaddrinfo(addrinfos);
         return NULL;
       }
 
@@ -163,14 +168,14 @@ lconnection_t *create_lconnection(int port) {
  * Destroy the list of lconnection.
  * @param ports The list of ports for which NOT to destroy the lconnection.
  */
-void destroy_connection_pool(list_t *connection_pool, list_t *ports) {
-  list_t *current;
-  LISTFOREACH(current, connection_pool) {
+void destroy_connection_pool(harp_list_t *connection_pool, harp_list_t *ports) {
+  harp_list_t *current;
+  HARP_LIST_FOR_EACH(current, connection_pool) {
     lconnection_t *lconnection = current->element;
 
     bool to_keep = false;
-    list_t *current2;
-    LISTFOREACH(current2, ports) {
+    harp_list_t *current2;
+    HARP_LIST_FOR_EACH(current2, ports) {
       int port = *((int*)current2->element);
       if(lconnection->port == port) {
         to_keep = true;
@@ -182,7 +187,7 @@ void destroy_connection_pool(list_t *connection_pool, list_t *ports) {
     }
   }
 
-  free_list(connection_pool, NULL);
+  harp_free_list(connection_pool, NULL);
 }
 
 void destroy_lconnection(lconnection_t *lconnection) {
@@ -210,13 +215,13 @@ unsigned int compute_hash(struct sockaddr_in *sin) {
   return tmp;
 }
 
-void create_pollfds(list_t *lconnections, struct pollfd **pollfds_ptr,
+void create_pollfds(harp_list_t *lconnections, struct pollfd **pollfds_ptr,
                     nfds_t *n_ptr) {
-  nfds_t n = length(lconnections);
+  nfds_t n = harp_length(lconnections);
   struct pollfd *pollfds = (struct pollfd*)scalloc(n, sizeof(struct pollfd));
 
   int i;
-  list_t *current;
+  harp_list_t *current;
   for(i = 0, current = lconnections; current != NULL;
       i++, current = current->next) {
     lconnection_t *lconnection = current->element;
@@ -230,11 +235,14 @@ void create_pollfds(list_t *lconnections, struct pollfd **pollfds_ptr,
 
 /**
  * Wait for the next connection on any of the socket of the connection pool.
+ * @param pollfds Structure to poll the sockets. It should be the same size and in the same order than the list of listening connections.
  * @return An accepted connection or NULL if it timed out.
  */
-aconnection_t *get_next_connection(list_t *lconnections, struct pollfd *pollfds,
-                                   nfds_t n) {
-  list_t *current;
+aconnection_t *get_next_connection(harp_list_t *lconnections,
+                                   struct pollfd *pollfds, nfds_t n) {
+  harp_list_t *current;
+  int i;
+
   while(1) {
     // FIXME: Any way to make it faster?
     int rc = poll(pollfds, n, 5 * 1000);
@@ -244,17 +252,21 @@ aconnection_t *get_next_connection(list_t *lconnections, struct pollfd *pollfds,
       return NULL;
     }
 
-    LISTFOREACH(current, lconnections) {
-      lconnection_t *lconnection = current->element;
-      struct sockaddr_storage addr;
-      socklen_t addrlen = sizeof(struct sockaddr_storage);
+    for(i = 0, current = lconnections; current != NULL;
+        i++, current = current->next) {
 
-      int sock = accept(lconnection->socket, (struct sockaddr*)&addr, &addrlen);
-      if(sock != -1) {
-        unsigned int addr_hash = compute_hash((struct sockaddr_in*)&addr);
-        return make_aconnection(addr_hash, lconnection->port, sock);
-      } else if(sock != EINTR || sock != EWOULDBLOCK) {
-        logerror("get_next_connection:accept");
+      if((pollfds[i].revents & POLLIN) == POLLIN) {
+        lconnection_t *lconnection = current->element;
+        struct sockaddr_storage addr;
+        socklen_t addrlen = sizeof(struct sockaddr_storage);
+
+        int sock = accept(lconnection->socket, (struct sockaddr*)&addr, &addrlen);
+        if(sock != -1) {
+          unsigned int addr_hash = compute_hash((struct sockaddr_in*)&addr);
+          return make_aconnection(addr_hash, lconnection->port, sock);
+        } else if(sock != EINTR || sock != EWOULDBLOCK) {
+          logerror("get_next_connection:accept");
+        }
       }
     }
   }

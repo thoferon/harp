@@ -4,30 +4,37 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 
 #include <memory.h>
+#include <options.h>
 
 #include <log.h>
+
+int global_facility = 0;
+
+void initialize_logger(options_t *options) {
+  global_facility = options->syslog_facility;
+}
 
 #ifdef SYSLOG_LOGGING
 
 void logmsg(int priority, const char *format, ...) {
   va_list args;
   va_start(args, format);
-  vsyslog(priority, format, args);
+  vsyslog(global_facility | priority, format, args);
   va_end(args);
 }
 
 void logerror(const char *name) {
-  // ": %m" + '\0' = 5
   size_t name_len = strlen(name);
-  char *format = (char*)smalloc(name_len + 5);
+  char *format = (char*)smalloc(name_len + strlen(": %m") + 1);
   strncpy(format, name, name_len);
   strncat(format, ": %m", 4);
   format[name_len + 4] = '\0';
 
   perror(name);
-  syslog(LOG_ERR, format);
+  syslog(global_facility | LOG_ERR, format);
 
   free(format);
 }
@@ -57,7 +64,7 @@ void logmsg(int priority, const char *format, ...) {
 }
 
 void logerror(const char *name) {
-  perror(name);
+  fprintf(stderr, "ERR: %s: %s\n", name, strerror(errno));
 }
 
 #endif

@@ -2,7 +2,7 @@
 #define RESOLVE_H 1
 
 #include <request.h>
-#include <primp_config.h>
+#include <harp.h>
 
 typedef enum resolution_strategy {
   RESOLUTION_STRATEGY_400   = 1,
@@ -13,10 +13,11 @@ typedef enum resolution_strategy {
   RESOLUTION_STRATEGY_CLOSE = 6
 } resolution_strategy_t;
 
-resolution_strategy_t resolve_request(request_t *, config_t *);
+resolution_strategy_t resolve_request(request_t *, harp_config_t *);
 void execute_fallback_strategy(int, resolution_strategy_t);
 
 resolution_strategy_t resolve_with_static_path(request_t *, char *);
-resolution_strategy_t resolve_with_server(request_t *, server_t *);
+resolution_strategy_t resolve_with_server(request_t *, harp_server_t *,
+                                          harp_config_t *);
 
 #endif
