@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <poll.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <log.h>
 #include <harp.h>
 #include <connection_pool.h>

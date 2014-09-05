@@ -1,7 +1,7 @@
 %code requires {
 #include <stdio.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <harp.h>
 }
 

@@ -14,7 +14,7 @@
 #include <config.h>
 #endif
 
-#include <memory.h>
+#include <smem.h>
 #include <log.h>
 #include <request.h>
 #include <harp.h>

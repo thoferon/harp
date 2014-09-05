@@ -15,7 +15,7 @@
 #include <syslog.h>
 
 #include <log.h>
-#include <memory.h>
+#include <smem.h>
 #include <options.h>
 
 #define DEFAULT_CONFIG_PATH   (SYSCONFDIR "/harp.conf")

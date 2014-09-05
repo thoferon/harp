@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <log.h>
 
 #include <request.h>

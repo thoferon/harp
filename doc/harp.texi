@@ -40,14 +40,16 @@ http://creativecommons.org/licenses/by/4.0/.
 @end ifnottex
 
 @menu
-* Overview::            Overview of harp.
-* Installation::        How to install the program from sources.
-* Configuration::       Configuration file, command-line option and reloading.
-* Options::             Command-line options to run harp.
-* Error handling::      How harp will react to possible errors.
-* Libharp::             Basics for using libharp.
-* Contribution::        What you should know to contribute to the project.
-* Index::               Complete index.
+* Overview::                    Overview of harp.
+* Installation::                How to install the program from sources.
+* Configuration::               Configuration file, command-line option and
+                                reloading.
+* Options::                     Command-line options to run harp.
+* Error handling::              How harp will react to possible errors.
+* Bugs/Missing features::       What you should do if you encounter a bug.
+* Libharp::                     Basics for using libharp.
+* Contributing::                What you should know to contribute to the project.
+* Index::                       Complete index.
 @end menu
 
 @node Overview
@@ -97,7 +99,6 @@ system.
 @menu
 * Disabling syslog::    Option to remove syslog from the code.
 * Tests::               How to run the test suite.
-* Execinfo::            Note related to libexecinfo.
 @end menu
 
 Once you downloaded @file{harp-@value{VERSION}.tar.gz}, it can be installed
@@ -138,18 +139,6 @@ Instead, harp will simply log to the standard error.
 Running the test suite before installing the program and the library can show
 some problems at an earlier step. It might be a good idea in your situation.
 Just run @command{make check}.
-
-@node Execinfo
-@section Execinfo
-
-@cindex execinfo, libexecinfo
-
-The testing program @command{check_memory_usage} in @file{tests/memory} runs the
-server and sends some requests. It shows any possible memory leaks at the end.
-
-If libexecinfo is installed on your system, harp will use @code{backtrace()} to
-display the address of the function having allocated the memory. If it's not
-installed, it will still compile but won't show any function address.
 
 @node Configuration
 @chapter Configuration
@@ -577,6 +566,16 @@ back to the cient.
 @tab No
 @end multitable
 
+@node Bugs/Missing features
+@chapter Bugs and missing features
+
+If you experience problems running harp or using libharp, please report it on
+issue tracker (@url{http://hub.darcs.net/thoferon/harp/issues}). By reporting
+bugs, you contribute to the project and your help is much appreciated.
+
+If you think some features is missing, you can also use the issue tracker to
+record it or, if you can, develop it yourself (see @ref{Contributing}).
+
 @node Libharp
 @chapter Libharp
 
@@ -770,10 +769,214 @@ configurations to write and the path of the file to write them to. It returns
 @code{0} if successful and @code{-1} otherwise (and also sets
 @code{harp_errno}).
 
-@node Contribution
-@chapter Contribution
+@node Contributing
+@chapter Contributing
 
-TODO
+If you want to contribute to the project, they are a few things you need to
+know. This chapter covers the architecture of the source code, how to compile
+it and some conventions used. It also explains where the code is versioned and
+how to send your patches for them to get into the repository.
+
+Any contribution is really welcome and you shoud not hesitate to ask for help
+should you need some. Send your questions to @email{tho.feron@@gmail.com}.
+
+@menu
+* Generalities::        Things to know before workig on the project.
+* Repository::          Working with the repository: getting the source code,
+                        sending patches, ...
+* Architecture::        Architecture of the source code.
+* Compilation::         How the project gets compiled.
+* Conventions::         Conventions used throughout the code.
+* Getting credit::      How to get credit from your work.
+@end menu
+
+@node Generalities
+@section Generalities
+
+@cindex Autotools
+@cindex Texinfo
+@cindex Check
+@cindex Execinfo
+
+@heading Autotools
+
+Harp uses the Autotools for its build system. Autoconf, Automake and Libtool
+need to be installed to compile from the repository. The first thing to do after
+getting the repository is to call @samp{sh ./bootstrap} to download and generate
+some files in the working directory. This script downloads any dependencies
+(e.g. m4 macros) and runs @samp{autoreconf --install}. This might need to be
+repeated after pulling patches from the repository.
+
+@heading Texinfo
+
+Texinfo is an another dependency that needs to be installed on the developer's
+machine. On OpenBSD, the package is called ``texlive_base'', there should be a
+similar one for your operating system.
+
+Ideally, the documentation should always be in sync with the code so you might
+have to check it before recording your changes. From the project's root
+directory, @samp{make info} generates the documentation and
+@samp{info doc/harp.info} allows you to browse it. If you prefer HTML, use
+@samp{make html} and @samp{open doc/harp.html}.
+
+@heading Check
+
+Harp's test suite uses Check (see @url{http://check.sourceforge.net/}) for the
+unit tests and it needs to be installed on your computer. On OpenBSD, the
+package is named ``check'' and it should be similar on your operating system.
+
+@heading Execinfo
+
+This dependency is optional. It is used by
+@file{tests/memory/check_memory_usage} to get the address of the functions
+leaking memory. If libexecinfo is not available, the tool is compiled without
+this code and won't record any address. You will just see @samp{0x0} when
+running it.
+
+@node Repository
+@section Working with the repository
+
+@cindex darcs
+
+At the moment, the source code is hosted at
+@url{http://hub.darcs.net/thoferon/harp}. You first have to clone the
+repository into your local file system. This is quite easy:
+
+@example
+$ darcs get http://hub.darcs.net/thoferon/harp local/path --lazy
+@end example
+
+The @option{--lazy} option is optional but it might get the job done faster,
+especially if you have a slow connection. If you plan on working offline, it
+might be better to remove this option.
+
+Once some changes are ready to be recorded, simply run @command{darcs record}
+and an interactive prompt will ask what changes to record. This creates a new
+patch in the local repository. The first time it's run in a repository, it will
+prompt for your e-mail address. It will be use later when sending your patches
+so ensure it is correct.
+
+Before sending your patches to the project, please remember to pull the latest
+patches and fix any potential conflicts. Also make sure the tests are still
+passing and that harp is compiling and working fine. Patches can be pulled with
+@command{darcs pull}.
+
+In order to send a patch bundle, use @command{darcs send}. It will interactively
+ask what patch to send, answer by @key{y} or @key{n}. When asked for the email
+address, enter a maintainer's address (currently only me, at
+@email{tho.feron@@gmail.com}). You will then have a chance to edit the contents
+of the email, please explain what the changes are and anything that needs to be
+known to review them.
+
+@node Architecture
+@section Architecture
+
+Here is a table explaining the purpose of every directory in the repository.
+
+@table @file
+@item src/
+The source code for the harp executable. It depends on code in @file{common/}
+and @file{libharp/}.
+@item include/
+The header files to be installed on the system (for libharp).
+@item libharp/
+The source code for the library libharp which allows to read and write
+configuration files.
+@item common/
+Some code shared between the executable and libharp but is not public, e.g.
+@code{smalloc()} is not shared by libharp but used by both the executable and
+the library.
+@item tests/unit/
+The unit tests for the code in both @file{src/} and @file{libharp/}.
+@item tests/memory/
+The source code for a simple tool that starts the server, sends some requests
+and track any memory leaks (with a lot of false positives unfortunately).
+@item doc/
+As the name says, the documentation you are currently looking at.
+@item website/
+The files for @url{http://www.harphttp.org}.
+@end table
+
+@node Compilation
+@section Compilation
+
+As said previously, harp uses Autotools. The first step is therefore to run
+@command{./configure} before being able to compile anything. Should you modify
+@file{configure.ac} or pull some patches that do, @samp{autoreconf --install}
+needs to be ran again or even @samp{sh ./bootstrap}. See @ref{Generalities}.
+
+The build system is then all managed with Makefiles. @samp{make} builds the
+executable, the library as well as the documentation. @samp{make check} builds
+and runs the unit tests but only builds @file{tests/memory/check_memory_usage}.
+@samp{make distcheck} creates a distribution tarball, extracts it in a directory
+and attempts to build the project and run the tests from another.
+
+The executable depends on two libraries: libharp and libcommon. The first is a
+library to read and write configuration files and is installed on the user's
+computer. The second is simply a convenience library and is not installed.
+Libharp also uses libcommon during the compilation.
+
+A second convenience library (not installed on the user's system) is created
+when compiling the executable: libharpapp. Its purpose is to be linked with the
+test programs to make compilation faster.
+
+@node Conventions
+@section Conventions
+
+The code is indented with 2 spaces and is aligned so that lines are no longer
+than 80 characters long. In my Emacs configuration, I use the following code.
+
+@lisp
+(require 'whitespace)
+(setq whitespace-style '(face empty tabs lines-tail trailing))
+(global-whitespace-mode t)
+@end lisp
+
+Whenever possible, the code is aligned on some characters. For instance, the
+assignments can be aligned like this:
+
+@example
+char *short       = "hello";
+char *longer_name = "world";
+@end example
+
+The types are ended with ``_t'' whether it's a @code{struct}, an @code{enum} or
+any other @code{typedef}. For example, to define a structure, you will use:
+
+@example
+typedef struct my_struct @{
+  // ...
+@} my_struct_t;
+@end example
+
+In the header files, the names of the variables are ommited and there is a space
+between the type and @samp{*} for pointers. A signature looks like this:
+
+@example
+char *some_function(char *, int);
+@end example
+
+It is hard to describe everything you should know about the conventions used by
+the code. Have a look at the code to get a better idea and, when in doubt,
+search for a similar thing to what you want to do elsewhere in the code.
+
+@node Getting credit
+@section Getting credit
+
+When working on something, it is normal to want to get some credit for it.
+Please edit the file @file{AUTHORS} at the root directory and append your name
+and your email address if you wish to be contactable.
+
+Also, you should edit the file @file{COPYING} and add a copyright statement
+after the other ones. The possible formats are as followed for, respectively,
+work in 2014, work in 2014, 2015 and 2016 and work in 2014 and 2016 but not
+2015.
+
+@example
+Copyright (c) 2014, Firstname Lastname
+Copyright (c) 2014-2016, Firstname Lastname
+Copyright (c) 2014, 2016, Firstname Lastname
+@end example
 
 @node Index
 @unnumbered Index

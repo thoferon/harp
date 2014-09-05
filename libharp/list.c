@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <config.h>
 #include <harp.h>
 

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <options.h>
 
 #include <log.h>

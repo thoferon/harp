@@ -11,7 +11,7 @@
 #define PACKAGE_STRING "harp"
 #endif
 
-#include <memory.h>
+#include <smem.h>
 #include <log.h>
 #include <harp.h>
 

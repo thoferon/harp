@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <string.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <log.h>
 #include <harp.h>
 #include <connection_pool.h>

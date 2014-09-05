@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <config_parser.h>
 
 void put_number(yyscan_t);

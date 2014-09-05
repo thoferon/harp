@@ -4,7 +4,7 @@
 #include <config_parser.h>
 #include <config_lexer.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <config.h>
 
 #include <harp.h>

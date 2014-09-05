@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <memory.h>
+#include <smem.h>
 
 inline void check_pointer(char *name, void *ptr) {
   if(ptr == NULL) {

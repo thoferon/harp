@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include <memory.h>
+#include <smem.h>
 #include <log.h>
 #include <harp.h>
 #include <request.h>
