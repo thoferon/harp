@@ -156,11 +156,13 @@ Just run @command{make check}.
 @cindex grammar
 
 @example
-       <config> ::= '@{' <config-items> <choice-groups> '@}'
+       <config> ::= '@{' <config-items> '@}'
 
- <config-items> ::= <filter>   <config-items>
-                  | <tag>      <config-items>
-                  | <resolver> <config-items>
+ <config-items> ::= <filter>       <config-items>
+                  | <tag>          <config-items>
+                  | <resolver>     <config-items>
+                  | <choice-group> <config-items>
+                  | <config>       <config-items>
                   | <empty>
 
        <filter> ::= "hostnames" <hostnames> ';'
@@ -175,9 +177,6 @@ Just run @command{make check}.
                   | <empty>
 
         <ports> ::= <number> <ports>
-                  | <empty>
-
-<choice-groups> ::= <choice-group> <choice-groups>
                   | <empty>
 
  <choice-group> ::= '[' <choices> ']'
@@ -199,6 +198,7 @@ Just run @command{make check}.
 * tag::         Send tag to upstream servers.
 * static-path:: Resolve by serving static files.
 * server::      Resolve by proxying the request to an upstream server.
+* include::     Directive to include other configuration files.
 @end menu
 
 @node hostnames
@@ -275,6 +275,20 @@ The directive @code{server} proxies the request to an upstream server with
 possible tags (see @ref{tag}). It takes the hostname of IP address of the
 server and the port on which to connect. Apart from the header @code{X-Tags},
 the request is transmitted as it has been received without any modification.
+
+@node include
+@subsection include
+
+@cindex include (directive)
+
+@example
+include "path/to/file.conf";
+@end example
+
+This is not really a directive as it is not defined in the grammar and is not
+reflected in the data structure parsed by harp. It includes another
+configuration file in the current one and can be anywhere inside the file. Paths
+are relative to the file being parsed.
 
 @node Examples
 @section Full examples
@@ -368,8 +382,10 @@ it. The application shall enable the feature when receiving the tag
 
 @cindex nested configuration, nesting
 
-There is no limit to the level of nesting the configuration can reach. Here is
-an example of a perfectly valid configuration file.
+There is no limit to the level of nesting the configuration can reach through
+choice groups. A choice group is simply a weighed list of possible
+configurations to choose from based on the IP of the client. Here is an example
+of a perfectly valid configuration file.
 
 @example
 @{
@@ -392,6 +408,56 @@ an example of a perfectly valid configuration file.
       tag "basic";
     @}
   ]
+@}
+@end example
+
+Moreover, a configuration can contain other ones (which can contain other ones
+and so on and so forth). It is useful to avoid repetition in a configuration
+file. @samp{@{ directive1; @{ directive2; @} @{ directive3; @} @}} is equivalent
+to having two configurations @samp{@{ directive1; directive2; @}} and
+@samp{@{ directive1; directive3; @}}. A more convulated example is the
+following.
+
+@example
+@{
+  directive1;
+
+  @{
+    directive2;
+  @}
+
+  @{
+    directive3;
+
+    @{
+      directive4;
+    @}
+
+    @{
+      directive5;
+    @}
+  @}
+@}
+@end example
+
+This configuration file would be equivalent to this one:
+
+@example
+@{
+  directive1;
+  directive2;
+@}
+
+@{
+  directive1;
+  directive3;
+  directive4;
+@}
+
+@{
+  directive1;
+  directive3;
+  directive5;
 @}
 @end example
 
@@ -744,9 +810,10 @@ harp_cons_choice_group(choice_group, config);
 // ...
 @end example
 
-@code{harp_duplicate_filter()} and @code{harp_duplicate_resolver()} are the
-only ones of their kinds and are used by harp while processing requests. There
-may be more of them in the future.
+Should you need to duplicate elements of a configuration (to free the memory of
+a structure while reusing some of its parts for example), the functions starting
+with @code{harp_duplicate_} duplicate the structures recursively and return a
+pointer to the newly created one. They can be freed independently thereafter.
 
 Finally, @code{harp_get_ports(harp_list_t *)} is also used by harp to connect
 to the relevant ports when starting or reloading the configuration (see

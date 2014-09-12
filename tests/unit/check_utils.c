@@ -1,7 +1,7 @@
 #include <check.h>
 #include <stdlib.h>
 
-#include <loader.h>
+#include <utils.h>
 
 START_TEST (test_make_config_path_without_root_directory) {
   char *config_path = make_config_path(NULL, "/path");
@@ -41,8 +41,8 @@ END_TEST
  * Suite
  */
 
-Suite *loader_suite() {
-  Suite *suite = suite_create("Loader");
+Suite *utils_suite() {
+  Suite *suite = suite_create("Utils");
 
   TCase *tc_config_path = tcase_create("Config path");
   tcase_add_test(tc_config_path, test_make_config_path_without_root_directory);

@@ -9,7 +9,7 @@ Suite *request_suite();
 Suite *resolve_suite();
 Suite *response_suite();
 Suite *worker_suite();
-Suite *loader_suite();
+Suite *utils_suite();
 Suite *harp_config_write_suite();
 
 #define ADD_SUITE(suite_func) { \
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   ADD_SUITE(resolve_suite);
   ADD_SUITE(response_suite);
   ADD_SUITE(worker_suite);
-  ADD_SUITE(loader_suite);
+  ADD_SUITE(utils_suite);
   ADD_SUITE(harp_config_write_suite);
 
   return (failure_count == 0 ? EXIT_SUCCESS : EXIT_FAILURE);

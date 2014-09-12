@@ -6,7 +6,7 @@
 #include <harp_config/find.h>
 
 START_TEST (test_find_config) {
-  harp_list_t *configs = harp_read_configs(FIXTURESDIR "/full.conf");
+  harp_list_t *configs = harp_read_configs(FIXTURESDIR "/full.conf", NULL);
 
   request_info_t *request_info1 =
     make_request_info(strdup("/"), strdup("blah"),  2);
@@ -19,6 +19,10 @@ START_TEST (test_find_config) {
   harp_config_t *config2 = find_config(configs, request_info1, 0xFFFFFFFF);
   harp_config_t *config3 = find_config(configs, request_info2, 0);
   harp_config_t *config4 = find_config(configs, request_info3, 0);
+
+  ck_assert(config1->resolvers != HARP_EMPTY_LIST);
+  ck_assert(config2->resolvers != HARP_EMPTY_LIST);
+  ck_assert(config3->resolvers != HARP_EMPTY_LIST);
 
   harp_resolver_t *resolver1 = (harp_resolver_t*)config1->resolvers->element;
   harp_resolver_t *resolver2 = (harp_resolver_t*)config2->resolvers->element;
@@ -42,7 +46,7 @@ START_TEST (test_find_config) {
 END_TEST
 
 START_TEST (test_choose_config) {
-  harp_list_t *configs  = harp_read_configs(FIXTURESDIR "/deep.conf");
+  harp_list_t *configs  = harp_read_configs(FIXTURESDIR "/deep.conf", NULL);
   harp_config_t *config = configs->element;
 
   harp_config_t *config1 = choose_config(config, 0   << 24);

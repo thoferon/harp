@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <smem.h>
+#include <utils.h>
 #include <log.h>
 #include <harp.h>
 #include <connection_pool.h>
@@ -147,62 +148,6 @@ void sigterm_handler(int sig) {
 }
 
 /*
- * Helpers
- */
-
-char *make_config_path(char *root_directory, char *path) {
-  if(root_directory == NULL) {
-    return strdup(path);
-  }
-
-  size_t config_path_len;
-  size_t root_directory_len = strlen(root_directory);
-  size_t path_len           = strlen(path);
-
-  bool chop_root_directory = false;
-  bool chop_path           = false;
-  bool add_slash           = false;
-
-  if(root_directory[root_directory_len - 1] == '/') {
-    if(path[0] == '/') {
-      config_path_len = root_directory_len + path_len - 1;
-      chop_path       = true;
-    } else {
-      config_path_len = root_directory_len + path_len;
-    }
-  } else {
-    if(path[0] == '/') {
-      config_path_len = root_directory_len + path_len;
-    } else {
-      config_path_len = root_directory_len + path_len + 1;
-      add_slash       = true;
-    }
-  }
-
-  char *config_path = (char*)malloc(config_path_len + 1);
-
-  size_t to_write =
-    chop_root_directory ? root_directory_len - 1 : root_directory_len;
-  size_t so_far = 0;
-  memcpy(config_path, root_directory, to_write);
-  so_far += to_write;
-
-  if(add_slash) {
-    config_path[so_far++] = '/';
-  }
-
-  if(chop_path) {
-    memcpy(config_path + so_far, path + 1, path_len - 1);
-  } else {
-    memcpy(config_path + so_far, path, path_len);
-  }
-
-  config_path[config_path_len] = '\0';
-
-  return config_path;
-}
-
-/*
  * Actions
  */
 
@@ -220,17 +165,13 @@ void reload_configuration(loader_environment_t *loader_environment,
   harp_list_t *oldports         = loader_environment->ports;
   worker_environment_t *oldwenv = loader_environment->worker_environment;
 
-  char *config_path =
-    make_config_path(root_directory, loader_environment->options->config_path);
-
-  harp_list_t *configs = harp_read_configs(config_path);
+  harp_list_t *configs =
+    harp_read_configs(loader_environment->options->config_path, root_directory);
   if(configs == NULL) {
     logmsg(LOG_ERR, "Couldn't read the configuration at %s: %s\n",
-           config_path, harp_strerror(harp_errno));
-    free(config_path);
+           loader_environment->options->config_path, harp_strerror(harp_errno));
     return;
   }
-  free(config_path);
 
   harp_list_t *ports = harp_get_ports(configs);
   harp_list_t *oldcpool = oldwenv == NULL ? NULL : oldwenv->connection_pool;

@@ -9,7 +9,7 @@
 #define INDENT_SIZE 2
 
 #define RETURNERROR() do {                      \
-    harp_errno = errno;                        \
+    harp_errno = errno;                         \
     return -1;                                  \
   } while(0)
 
@@ -71,9 +71,11 @@ int harp_write_configs_f(harp_list_t *configs, FILE *f, char *indent) {
       return -1;
     }
 
-    rc = fprintf(f, "\n");
-    if(rc == -1) {
-      RETURNERROR();
+    if(current->next != HARP_EMPTY_LIST) {
+      rc = fprintf(f, "\n");
+      if(rc == -1) {
+        RETURNERROR();
+      }
     }
   }
 
@@ -120,8 +122,26 @@ int harp_write_config(harp_config_t *config, FILE *f,
       return -1;
     }
   }
+  HARP_LIST_FOR_EACH(current, config->subconfigs) {
+    harp_config_t *config = (harp_config_t*)current->element;
+    rc = fprintf(f, "\n");
+    if(rc == -1) {
+      free(new_indent);
+      return -1;
+    }
+    rc = harp_write_config(config, f, new_indent, true);
+    if(rc == -1) {
+      free(new_indent);
+      return -1;
+    }
+  }
   HARP_LIST_FOR_EACH(current, config->choice_groups) {
     harp_list_t *choice_group = (harp_list_t*)current->element;
+    rc = fprintf(f, "\n");
+    if(rc == -1) {
+      free(new_indent);
+      return -1;
+    }
     rc = harp_write_choice_group(choice_group, f, new_indent);
     if(rc == -1) {
       free(new_indent);
@@ -282,12 +302,6 @@ int harp_write_choice_group(harp_list_t *choices, FILE *f, char *indent) {
   int rc;
 
   char *new_indent = create_new_indent(indent);
-
-  rc = fprintf(f, "\n");
-  if(rc == -1) {
-    free(new_indent);
-    RETURNERROR();
-  }
 
   INDENT();
 

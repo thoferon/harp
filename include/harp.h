@@ -3,15 +3,22 @@
 
 #include <stdbool.h>
 
-// Errors
+/*
+ * Errors
+ */
 
 #define HARP_ERROR_INVALID_FILTER   -1
 #define HARP_ERROR_INVALID_RESOLVER -2
+#define HARP_ERROR_PARSE_ERROR      -3
+#define HARP_ERROR_NO_CONFIG        -4
 
 extern int harp_errno;
+extern char harp_errstr[1024]; /* Should not be accessed directly */
 char *harp_strerror(int);
 
-// Lists
+/*
+ * Lists
+ */
 
 #define HARP_EMPTY_LIST NULL
 
@@ -39,7 +46,9 @@ harp_list_t *harp_find_element(harp_list_t *, harp_predicate_function_t *);
 #define HARP_LIST_FOR_EACH(varname, list) \
   for(varname = (list); varname != HARP_EMPTY_LIST; varname = varname->next)
 
-// Configuration
+/*
+ * Configuration
+ */
 
 typedef enum harp_filter_type {
   HARP_FILTER_TYPE_HOSTNAMES = 0,
@@ -87,9 +96,10 @@ struct harp_config {
   harp_list_t *tags;
   harp_list_t *resolvers;
   harp_list_t *choice_groups;
+  harp_list_t *subconfigs;
 };
 
-harp_list_t *harp_read_configs(char *);
+harp_list_t *harp_read_configs(char *, char *);
 int harp_write_configs(harp_list_t *, char *);
 
 harp_filter_t *harp_make_hostnames_filter(harp_list_t *);
@@ -102,11 +112,17 @@ void harp_cons_filter(harp_filter_t *, harp_config_t *);
 void harp_cons_tag(char *, harp_config_t *);
 void harp_cons_resolver(harp_resolver_t *, harp_config_t *);
 void harp_cons_choice_group(harp_list_t *, harp_config_t *);
+void harp_cons_subconfig(harp_config_t *, harp_config_t *);
 
 harp_choice_t *harp_make_choice(harp_prob_t, harp_config_t *);
 
 harp_filter_t *harp_duplicate_filter(harp_filter_t *);
 harp_resolver_t *harp_duplicate_resolver(harp_resolver_t *);
+harp_choice_t *harp_duplicate_choice(harp_choice_t *);
+harp_list_t *harp_duplicate_choice_group(harp_list_t *);
+harp_config_t *harp_duplicate_config(harp_config_t *);
+
+harp_config_t *harp_merge_configs(harp_config_t *, harp_config_t *);
 
 void harp_free_filter(harp_filter_t *);
 void harp_free_server(harp_server_t *);

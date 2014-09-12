@@ -1,34 +1,66 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 #include <config_parser.h>
+#include <lexer_extra.h>
 #include <config_lexer.h>
 
 #include <smem.h>
+#include <utils.h>
 #include <config.h>
 
 #include <harp.h>
 
-harp_list_t *harp_read_configs(char *path) {
-  harp_list_t *configs;
+harp_list_t *harp_read_configs(char *path, char *root_directory) {
+  harp_list_t *configs = HARP_EMPTY_LIST;
+  char *full_path      = make_config_path(root_directory, path);
 
-  FILE *f = fopen(path, "r");
+  /* fopen() because flex expects FILE* */
+  FILE *f = fopen(full_path, "r");
   if(f == NULL) {
     harp_errno = errno;
+    free(full_path);
     return NULL;
   }
 
+  extra_t extra;
+  /* full_path will be freed when destroying the extra_file's */
+  extra_file_t *extra_file = make_extra_file(full_path, f);
+  extra.files              = harp_singleton(extra_file);
+  extra.root_directory     = root_directory;
+
   void *scanner;
   yylex_init(&scanner);
+  yylex_init_extra(&extra, &scanner);
   yyset_in(f, scanner);
 
   int rc = yyparse(scanner, &configs);
 
   yylex_destroy(scanner);
-  fclose(f);
 
-  // FIXME: in case of failure, what about memory?
-  return rc == 0 ? configs : NULL;
+  harp_list_t *current;
+  HARP_LIST_FOR_EACH(current, extra.files) {
+    extra_file = (extra_file_t*)current->element;
+    int rc2 = fclose(extra_file->f);
+    if(rc2 != 0) {
+      rc = rc2;
+      harp_errno = errno;
+    }
+  }
+  harp_free_list(extra.files, (harp_free_function_t*)&free_extra_file);
+
+  if(configs == HARP_EMPTY_LIST && rc == 0) {
+    harp_errno = HARP_ERROR_NO_CONFIG;
+    return NULL;
+  } else if(rc != 0) {
+    harp_free_list(configs, (harp_free_function_t*)&harp_free_config);
+    return NULL;
+  } else  {
+    return configs;
+  }
 }
 
 /*
@@ -91,6 +123,10 @@ void harp_cons_choice_group(harp_list_t *choice_group, harp_config_t *config) {
   config->choice_groups = harp_cons(choice_group, config->choice_groups);
 }
 
+void harp_cons_subconfig(harp_config_t *subconfig, harp_config_t *config) {
+  config->subconfigs = harp_cons(subconfig, config->subconfigs);
+}
+
 harp_choice_t *harp_make_choice(harp_prob_t prob, harp_config_t *config) {
   harp_choice_t *choice = (harp_choice_t*)smalloc(sizeof(struct harp_choice));
 
@@ -105,12 +141,15 @@ harp_choice_t *harp_make_choice(harp_prob_t prob, harp_config_t *config) {
  */
 
 int *duplicate_port(int *port) {
+  if(port == NULL) { return NULL; }
   int *new_port = (int*)smalloc(sizeof(int));
   *new_port = *port;
   return new_port;
 }
 
 harp_filter_t *harp_duplicate_filter(harp_filter_t *filter) {
+  if(filter == NULL) { return NULL; }
+
   harp_list_t *new_hostnames;
   harp_list_t *new_ports;
 
@@ -130,6 +169,8 @@ harp_filter_t *harp_duplicate_filter(harp_filter_t *filter) {
 }
 
 harp_resolver_t *harp_duplicate_resolver(harp_resolver_t *resolver) {
+  if(resolver == NULL) { return NULL; }
+
   switch(resolver->type) {
   case HARP_RESOLVER_TYPE_STATIC_PATH:
     return harp_make_static_path_resolver(strdup(resolver->static_path));
@@ -140,6 +181,64 @@ harp_resolver_t *harp_duplicate_resolver(harp_resolver_t *resolver) {
 
   default: return NULL;
   }
+}
+
+harp_choice_t *harp_duplicate_choice(harp_choice_t *choice) {
+  if(choice == NULL) { return NULL; }
+  return harp_make_choice(choice->prob, harp_duplicate_config(choice->config));
+}
+
+harp_list_t *harp_duplicate_choice_group(harp_list_t *choice_group) {
+  return harp_duplicate(choice_group,
+                        (harp_duplicate_function_t*)&harp_duplicate_choice);
+}
+
+harp_config_t *harp_duplicate_config(harp_config_t *config) {
+  if(config == NULL) { return NULL; }
+
+  harp_config_t *new_config = harp_make_empty_config();
+
+  new_config->filters =
+    harp_duplicate(config->filters,
+                   (harp_duplicate_function_t*)&harp_duplicate_filter);
+  new_config->tags = harp_duplicate(config->tags,
+                                    (harp_duplicate_function_t*)&strdup);
+  new_config->resolvers =
+    harp_duplicate(config->resolvers,
+                   (harp_duplicate_function_t*)&harp_duplicate_resolver);
+  new_config->choice_groups =
+    harp_duplicate(config->choice_groups,
+                   (harp_duplicate_function_t*)&harp_duplicate_choice_group);
+  new_config->subconfigs =
+    harp_duplicate(config->subconfigs,
+                   (harp_duplicate_function_t*)&harp_duplicate_config);
+
+  return new_config;
+}
+
+/*
+ * Merge configurations
+ */
+
+harp_config_t *harp_merge_configs(harp_config_t *config1,
+                                  harp_config_t *config2) {
+  harp_config_t *new_config  = harp_duplicate_config(config1);
+  harp_config_t *dup_config2 = harp_duplicate_config(config2);
+
+  new_config->filters       = harp_concat(new_config->filters,
+                                          dup_config2->filters);
+  new_config->resolvers     = harp_concat(new_config->resolvers,
+                                          dup_config2->resolvers);
+  new_config->tags          = harp_concat(new_config->tags, dup_config2->tags);
+  new_config->choice_groups = harp_concat(new_config->choice_groups,
+                                          dup_config2->choice_groups);
+  new_config->subconfigs    = harp_concat(new_config->subconfigs,
+                                          dup_config2->subconfigs);
+
+  /* Just free() as new_config reuses the lists of dup_config2 */
+  free(dup_config2);
+
+  return new_config;
 }
 
 /*
@@ -155,7 +254,6 @@ void harp_free_filter(harp_filter_t *filter) {
     harp_free_list(filter->ports, &free);
     break;
   }
-
   free(filter);
 }
 
@@ -196,6 +294,8 @@ void harp_free_config(harp_config_t *config) {
                  (harp_free_function_t*)&harp_free_resolver);
   harp_free_list(config->choice_groups,
                  (harp_free_function_t*)&harp_free_choice_group);
+  harp_free_list(config->subconfigs,
+                 (harp_free_function_t*)&harp_free_config);
   free(config);
 }
 

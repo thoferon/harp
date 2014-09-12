@@ -47,14 +47,37 @@ bool matches_request_info(harp_config_t *config,
 }
 
 harp_config_t *find_config(harp_list_t *configs, request_info_t *request_info,
-                            unsigned int hash) {
+                           unsigned int hash) {
   harp_list_t *current;
   HARP_LIST_FOR_EACH(current, configs) {
     harp_config_t *config        = current->element;
     harp_config_t *chosen_config = choose_config(config, hash);
+
     if(matches_request_info(chosen_config, request_info)) {
-      return chosen_config;
-    } else {
+      if(chosen_config->subconfigs == HARP_EMPTY_LIST) {
+        /* If there are no subconfigs, we found a winner. */
+        return chosen_config;
+      } else {
+        /* We allocate three configs and free two at each level.
+           Maybe this will become a performance issue? */
+        harp_config_t *subconfig =
+          find_config(chosen_config->subconfigs, request_info, hash);
+
+        /* If there are subconfigs, one MUST match or we test the next config
+           at this level */
+        if(subconfig == NULL) {
+          harp_free_config(chosen_config);
+        } else {
+          harp_config_t *result_config =
+            harp_merge_configs(chosen_config, subconfig);
+          //harp_free_config(chosen_config);
+          //harp_free_config(subconfig);
+          return result_config;
+        }
+        return chosen_config;
+      }
+
+    } else { /* Check next config if this one doesn't match */
       harp_free_config(chosen_config);
     }
   }
@@ -104,32 +127,24 @@ harp_config_t *choose_config_from_choice_group(harp_list_t *choice_group,
 
 // Create a brand new config. It should be possible to free the original config.
 harp_config_t *choose_config(harp_config_t *config, unsigned int hash) {
-  harp_config_t *result_config = harp_make_empty_config();
-
-  result_config->filters =
-    harp_duplicate(config->filters,
-                   (harp_duplicate_function_t*)&harp_duplicate_filter);
-  result_config->tags = harp_duplicate(config->tags,
-                                       (harp_duplicate_function_t*)&strdup);
-  result_config->resolvers =
-    harp_duplicate(config->resolvers,
-                   (harp_duplicate_function_t*)&harp_duplicate_resolver);
+  harp_config_t *result_config = harp_duplicate_config(config);
 
   harp_list_t *current;
   HARP_LIST_FOR_EACH(current, config->choice_groups) {
     harp_list_t *choice_group = (harp_list_t*)current->element;
-    harp_config_t *subconfig  = choose_config_from_choice_group(choice_group,
-                                                                hash);
+    harp_config_t *chosen_config =
+      choose_config_from_choice_group(choice_group, hash);
 
-    result_config->filters   = harp_concat(result_config->filters,
-                                           subconfig->filters);
-    result_config->tags      = harp_concat(result_config->tags,
-                                           subconfig->tags);
-    result_config->resolvers = harp_concat(result_config->resolvers,
-                                           subconfig->resolvers);
+    result_config->filters =
+      harp_concat(result_config->filters, chosen_config->filters);
+    result_config->tags =
+      harp_concat(result_config->tags, chosen_config->tags);
+    result_config->resolvers =
+      harp_concat(result_config->resolvers, chosen_config->resolvers);
 
-    // There are no choice groups and the other elements are used in `config`
-    free(subconfig);
+    // There are no choice groups nor subconfigs and
+    // the other elements are used in `config`.
+    free(chosen_config);
   }
 
   return result_config;

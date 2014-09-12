@@ -24,7 +24,6 @@ bool check_terminate_flag();
 void sigusr1_handler(int);
 void sigterm_handler(int);
 
-char *make_config_path(char *, char *);
 void reload_configuration(loader_environment_t *, char *);
 void terminate(loader_environment_t *);
 

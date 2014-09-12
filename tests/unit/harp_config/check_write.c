@@ -6,7 +6,7 @@
 #include <harp.h>
 
 START_TEST (test_harp_write_configs) {
-  harp_list_t *configs = harp_read_configs(FIXTURESDIR "/full.conf");
+  harp_list_t *configs = harp_read_configs(FIXTURESDIR "/full.conf", NULL);
 
   char *tpl = "/tmp/harp.test.XXXXXXXXXX";
   char *temp_path = (char*)malloc(strlen(tpl) + 1);
@@ -31,13 +31,13 @@ START_TEST (test_harp_write_configs) {
     ck_abort();
   }
 
-  char buf1[100], buf2[100];
+  char buf1[300], buf2[300];
 
-  size_t count1 = fread(&buf1, 1, 99, f1);
-  size_t count2 = fread(&buf2, 1, 99, f2);
+  size_t count1 = fread(&buf1, 1, 299, f1);
+  size_t count2 = fread(&buf2, 1, 299, f2);
 
-  buf1[99] = '\0';
-  buf2[99] = '\0';
+  buf1[299] = '\0';
+  buf2[299] = '\0';
 
   ck_assert_int_ne(count1, 0);
   ck_assert_int_ne(count2, 0);
