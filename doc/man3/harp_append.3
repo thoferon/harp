@@ -1,0 +1,35 @@
+.Dd $Mdocdate$
+.Dt harp_append 3 "libharp manual"
+
+.Sh NAME
+
+.Nm harp_append
+.Nd append a new element to a list
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_append "harp_list_t *list, void *element"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_append
+function allocates a new node, sets the element pointer and makes the field
+.Nm next
+of the last node of
+.Fa list
+point the newly allocated node. This effectively appends an element at the end
+of a list.
+
+/!\\ Be cautious as it might mutate the first list.
+
+Because the returned list "contains" the passed one, only the returned one
+should be freed with
+.Fn harp_free_list .
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3 ,
+.Xr harp_cons 3 ,
+.Xr harp_free_list 3

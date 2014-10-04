@@ -1,0 +1,30 @@
+.Dd $Mdocdate$
+.Dt harp_concat 3 "libharp manual"
+
+.Sh NAME
+
+.Nm harp_concat
+.Nd concatenate two lists
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_concat "harp_list_t *first_list, harp_list_t *second_list"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_concat
+function returns a new list with all the elements of the first followed by the
+ones of the second.
+
+/!\\ Be cautious as it might mutate the first list.
+
+Because the returned list "contains" the passed ones, only the returned one
+should be freed with
+.Fn harp_free_list .
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3 ,
+.Xr harp_free_list 3

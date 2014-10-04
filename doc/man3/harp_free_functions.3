@@ -1,0 +1,32 @@
+.Dd $Mdocdate$
+.Dt harp_free_functions 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_free_*
+.Nd deallocate parts of configurations
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft void
+.Fn harp_free_filter "harp_filter_t *filter"
+.Ft void
+.Fn harp_free_server "harp_server_t *server"
+.Ft void
+.Fn harp_free_resolver "harp_resolver_t *resolver"
+.Ft void
+.Fn harp_free_choice "harp_choice_t *choice"
+.Ft void
+.Fn harp_free_choice_group "harp_list_t *choice_group"
+.Ft void
+.Fn harp_free_config "harp_config_t *config"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_free_*
+functions deallocate any parts of or a configuration itself in memory.
+
+.Sh SEE ALSO
+
+.Xr harp_read_configs 3 ,
+.Xr harp_free_list 3

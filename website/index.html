@@ -16,7 +16,13 @@
       .footer {
         border-top: 1px solid #EEEEEE;
         padding-top: 20px;
-        margin-top: 50px;
+        margin-top: 10px;
+      }
+
+      #config-example {
+        font-family: monospace;
+        font-size: 85%;
+        white-space: pre-wrap;
       }
     </style>
   </head>
@@ -67,65 +73,110 @@
             All releases
           </a>
         </aside>
+      </div>
 
-        <div class="row">
-          <nav class="col-md-8 col-md-offset-2">
-            <h1>Useful links</h1>
+      <div class="row">
+        <section class="col-md-4">
+          <h1>Configuration</h1>
 
-            <dl>
-              <dt>
-                <a href="http://hub.darcs.net/thoferon/harp">
-                  Repository
-                </a>
-              </dt>
-              <dd>
-                The darcs repository on
-                <a href="http://hub.darcs.net" target="_blank">hub.darcs.net</a>
-                where the code source is versioned.
-              </dd>
+          <p>
+            A simple configuration file sending 10% of the requests to
+            <samp>localhost:3000</samp> and the remaining 90% to
+            <samp>localhost:3001</samp>.
+          </p>
 
-              <dt>
-                <a href="http://hub.darcs.net/thoferon/harp/issues">
-                  Issue tracker
-                </a>
-              </dt>
-              <dd>
-                Should you encounter any bug, please add a new issue by clicking
-                on <code>new issue</code> so it can be fixed as soon as
-                possible. This would be really appreciated.
-              </dd>
+          <div class="well well-sm" id="config-example">{
+  hostnames "example.com" "example.net";
+  ports 80;
 
-              <dt>
-                <a href="doc/0.9">
-                  Documentation for the latest version
-                </a>
-              </dt>
-              <dd>
-                In-depth documentation covering how to the program, how to
-                develop with libharp and how to contribute to the project. The
-                documentation can be generated from the source code, see the
-                README file.
-              </dd>
+  [
+    1 {
+      server "localhost" 3000;
+    }
 
-              <dt>
-                <a href="doc/">Documentation by version</a>
-              </dt>
-              <dd>
-                Parent directory of the documentation for all the different
-                versions.
-              </dd>
-            </dl>
-          </nav>
-        </div>
+    9 {
+      server "localhost" 3001;
+    }
+  ]
+}</div>
+        </section>
 
-        <footer class="row footer">
+        <section class="col-md-4">
+          <h1>Installation</h1>
+
+          <p>
+            In order to install harp from sources, you can use the following
+            commands which should work on most systems.
+          </p>
+
+          <div class="well well-sm">
+            curl http://www.harphttp.org/releases/harp-0.9.tar.gz -o harp-0.9.tar.gz<br><br>
+            tar xzf harp-0.9.tar.gz<br>
+            cd harp-0.9<br><br>
+            ./configure<br>
+            make<br><br>
+            sudo make install
+          </div>
+        </section>
+
+        <nav class="col-md-4">
+          <h1>Useful links</h1>
+
+          <dl>
+            <dt>
+              <a href="http://hub.darcs.net/thoferon/harp">
+                Repository
+              </a>
+            </dt>
+            <dd>
+              The darcs repository on
+              <a href="http://hub.darcs.net" target="_blank">hub.darcs.net</a>
+              where the source code is versioned.
+            </dd>
+
+            <dt>
+              <a href="http://hub.darcs.net/thoferon/harp/issues">
+                Issue tracker
+              </a>
+            </dt>
+            <dd>
+              Should you encounter any bug, please add a new issue by clicking
+              on <code>new issue</code> so it can be fixed as soon as
+              possible. This would be really appreciated.
+            </dd>
+
+            <dt>
+              <a href="doc/0.9">
+                Documentation for the latest version
+              </a>
+            </dt>
+            <dd>
+              In-depth documentation covering how to use the program, how to
+              develop with libharp and how to contribute to the project. The
+              documentation can be generated from the source code, see the
+              README file.
+            </dd>
+
+            <dt>
+              <a href="doc/">Documentation by version</a>
+            </dt>
+            <dd>
+              Parent directory of the documentation for all the different
+              versions.
+            </dd>
+          </dl>
+        </nav>
+      </div>
+
+      <footer class="row footer">
+        <div class="col-md-12">
           <p class="text-muted">
             <small>
               Copyright &copy; 2014, Thomas Feron. All rights reserved.
             </small>
-          </p>
-        </footer>
-      </div>
+         </p>
+       </div>
+      </footer>
     </div>
 
     <script>

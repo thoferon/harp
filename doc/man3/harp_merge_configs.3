@@ -1,0 +1,30 @@
+.Dd $Mdocdate$
+.Dt harp_merge_configs 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_merge_configs
+.Nd merge configurations into one
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_config_t *
+.Fn harp_merge_configs "harp_config_t *config1, harp_config_t *config2"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_merge_configs
+function builds a new configuration from the two given. A configuration is
+basically a bunch of lists which are concatenated with the elements of
+.Fa config1
+first and then the elements of
+.Fa config2 .
+All elements are duplicated in memory so both arguments and the resulting
+configuration must be deallocated with
+.Fn harp_free_config .
+
+.Sh SEE ALSO
+
+.Xr harp_read_configs 3 ,
+.Xr harp_duplicate_functions 3 ,
+.Xr harp_free_functions 3

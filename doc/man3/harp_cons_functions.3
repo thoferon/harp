@@ -1,0 +1,50 @@
+.Dd $Mdocdate$
+.Dt harp_cons_functions 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_cons_*
+.Nd add elements into a configuration
+
+.Sh SYNOPSIS
+.In harp.hn
+.Ft void
+.Fn harp_cons_filter "harp_filter_t *filter, harp_config_t *config"
+.Ft void
+.Fn harp_cons_tag "char *tag, harp_config_t *config"
+.Ft void
+.Fn harp_cons_resolver "harp_resolver_t *resolver, harp_config_t *config"
+.Ft void
+.Fn harp_cons_choice_group "harp_list_t *choice_group, harp_config_t *config"
+.Ft void
+.Fn harp_cons_subconfig "harp_config_t *subconfig, harp_config_t *config"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_cons_*
+functions are convenience functions to adds elements to a configuration passed
+as the second argument
+.Fa config .
+It is using
+.Fn harp_cons
+so the components are prepended to their respective list inside the
+configuration.
+
+Building these components should be done by using the
+.Fn harp_make_*
+functions.
+
+Note that the argument
+.Fa choice_group
+of the function
+.Fn harp_cons_subconfig
+is merely a list of choices as
+.Ft harp_choice_t .
+
+.Sh SEE ALSO
+
+.Xr harp_write_configs 3 ,
+.Xr harp_singleton 3 ,
+.Xr harp_cons 3 ,
+.Xr harp_make_functions 3 ,
+.Xr harp_free_functions 3

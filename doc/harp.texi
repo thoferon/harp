@@ -4,6 +4,11 @@
 @include version.texi
 @settitle Harp Manual, version @value{VERSION}
 @paragraphindent 0
+
+@dircategory Network applications
+@direntry
+* Harp::        HTTP reverse proxy.
+@end direntry
 @c %**end of header
 
 @copying
@@ -535,7 +540,7 @@ be able to change to the given group.
 Finally, the option @anchor{chroot}@option{--chroot} is used to change the
 process' root directory. See chroot(2). When used, remember the path to the
 configuration file should be relative to the chroot directory as well as any
-@samp{static-path} directive, event relative paths as the working directory is
+@samp{static-path} directive, even relative paths as the working directory is
 set to root directory once @code{chroot()} has been called.
 
 @node Other options

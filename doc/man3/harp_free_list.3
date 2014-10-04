@@ -1,0 +1,30 @@
+.Dd $Mdocdate$
+.Dt harp_free_list 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_free_list
+.Nd deallocate a list and its elements
+
+.Sh SYNOPSIS
+.In harp.h
+.Vt typedef void harp_free_function_t(void *);
+.Ft void
+.Fn harp_free_list "harp_list_t *list, harp_free_function_t *free_function"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_free_list
+function deallocates
+.Fa list
+by walking through every node, calling the
+.Fa free_function
+callback to deallocate the elements and deallocating the nodes themselves. If
+.Fa free_function
+is
+.Dv NULL ,
+only the nodes are deallocated.
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3

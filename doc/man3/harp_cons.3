@@ -1,0 +1,32 @@
+.Dd $Mdocdate$
+.Dt harp_cons 3 "libharp manual"
+
+.Sh NAME
+
+.Nm harp_cons
+.Nd prepend a new element to a list
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_cons "void *element, harp_list_t *list"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_cons
+function allocates a new node, sets the element pointer and makes
+.Nm next
+point to the value of
+.Fa list .
+This effectively adds an element at the beginning of a list.
+
+Because the returned list "contains" the passed one, only the returned one
+should be freed with
+.Fn harp_free_list .
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3 ,
+.Xr harp_append 3 ,
+.Xr harp_free_list 3

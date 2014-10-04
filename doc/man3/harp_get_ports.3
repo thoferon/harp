@@ -1,0 +1,25 @@
+.Dd $Mdocdate$
+.Dt harp_get_ports 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_get_ports
+.Nd extract ports from configurations
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_get_ports "harp_list_t *configs"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_get_ports
+function extracts the list of all port numbers mentioned into a list of
+configurations at any level of depth without duplicates. The list must be
+deallocated by
+.Fn harp_free_list .
+
+.Sh SEE ALSO
+
+.Xr harp_read_configs 3 ,
+.Xr harp_free_list 3

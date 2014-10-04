@@ -1,0 +1,34 @@
+.Dd $Mdocdate$
+.Dt harp_duplicate_functions 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_duplicate_*
+.Nd duplicate parts of configurations
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_filter_t *
+.Fn harp_duplicate_filter "harp_filter_t *filter"
+.Ft harp_resolver_t *
+.Fn harp_duplicate_resolver "harp_resolver_t *resolver"
+.Ft harp_choice_t *
+.Fn harp_duplicate_choice "harp_choice_t *choice"
+.Ft harp_list_t *
+.Fn harp_duplicate_choice_group "harp_list_t *choice_group"
+.Ft harp_config_t *
+.Fn harp_duplicate_config "harp_config_t *config"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_duplicate_*
+functions duplicate any parts of or a configuration itself in memory. This is
+useful to duplicate a part of a configuration before deallocating the whole
+thing in one single call to the
+.Fn harp_free_config
+function for instance. The declarations are mostly self-explanatory.
+
+.Sh SEE ALSO
+
+.Xr harp_duplicate 3 ,
+.Xr harp_free_functions 3

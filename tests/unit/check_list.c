@@ -238,7 +238,7 @@ START_TEST (test_harp_find_element_when_none_matches) {
 
   void *found_element =
     harp_find_element(list, (harp_predicate_function_t*)&is_two);
-  ck_assert(found_element == NULL);
+  ck_assert(found_element == HARP_EMPTY_LIST);
 
   harp_free_list(list, NULL);
 }

@@ -1,0 +1,32 @@
+.Dd $Mdocdate$
+.Dt harp_errors 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_errno ,
+.Nm harp_strerror
+.Nd how to deal with errors by libharp
+
+.Sh SYNOPSIS
+.In harp.h
+.Vt extern int harp_errno;
+.Ft char *
+.Fn harp_strerror "int errno"
+
+.Sh DESCRIPTION
+
+This is intended to mimic the behaviour of
+.Nm errno
+and
+.Fn strerror
+from the standard library. The
+.Fn harp_strerror
+function should therefore be passed the value of
+.Nm harp_errno
+set by failing functions.
+
+.Sh RETURN VALUE
+
+The
+.Fn harp_strerror
+function returns a pointer to a constant NULL-terminated string so it does not
+need to be freed.

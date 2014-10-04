@@ -1,0 +1,45 @@
+.Dd $Mdocdate$
+.Dt harp_singleton 3 "libharp manual"
+
+.Sh NAME
+
+.Nm harp_singleton
+.Nd create a one-element list
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_singleton "void *element"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_singleton
+function allocates a one-element list with the element passed as the argument.
+
+Lists are defined as:
+
+.Bd -literal
+typedef struct harp_list {
+  void *element;
+  struct harp_list *next;
+} harp_list_t;
+.Ed
+
+The function sets
+.Nm element
+to the argument passed and
+.Nm next
+to
+.Nm HARP_EMPTY_LIST .
+
+The resulting list should be freed with
+.Fn harp_free_list .
+
+.Sh SEE ALSO
+
+.Xr harp_free_list 3 ,
+.Xr harp_cons 3 ,
+.Xr harp_concat 3 ,
+.Xr harp_last 3 ,
+.Xr harp_append 3

@@ -19,7 +19,7 @@
 #include <options.h>
 
 #define DEFAULT_CONFIG_PATH   (SYSCONFDIR "/harp.conf")
-#define DEFAULT_THREAD_NUMBER 8
+#define DEFAULT_THREAD_NUMBER 32
 
 void usage(char *);
 void show_version();

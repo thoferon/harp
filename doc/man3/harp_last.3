@@ -1,0 +1,29 @@
+.Dd $Mdocdate$
+.Dt harp_last 3 "libharp manual"
+
+.Sh NAME
+
+.Nm harp_last
+.Nd get the last node of a list
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_last "harp_list_t *list"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_last
+function walks through the list to find the last node.
+
+.Sh RETURN VALUES
+
+Most of the time, it returns a pointer to a node structure except if the given
+list is empty in which case it returns
+.Nm HARP_EMPTY_LIST .
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3 ,
+.Xr harp_length 3

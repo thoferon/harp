@@ -1,0 +1,9 @@
+Changes made between 0.9 and 1.0
+
+* Directive `include'
+* Subconfigurations
+* Various bug fixes
+* Man pages and more documentation
+* Better website
+* Default thread number to 32
+* Better parse error messages

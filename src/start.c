@@ -65,20 +65,6 @@ int start(int argc, char **argv) {
     }
   }
 
-  if(options->chroot_directory) {
-    rc = chroot(options->chroot_directory);
-    if(rc == -1) {
-      logerror("start:chroot");
-      return EXIT_FAILURE;
-    }
-
-    rc = chdir("/");
-    if(rc == -1) {
-      logerror("start:chdir");
-      return EXIT_FAILURE;
-    }
-  }
-
   if(options->group) {
     struct group *grp = getgrnam(options->group);
     if(grp == NULL) {
@@ -105,6 +91,20 @@ int start(int argc, char **argv) {
     rc = setuid(pwd->pw_uid);
     if(rc != 0) {
       logmsg(LOG_ERR, "start:setuid: Couldn't set the user ID\n");
+      return EXIT_FAILURE;
+    }
+  }
+
+  if(options->chroot_directory) {
+    rc = chroot(options->chroot_directory);
+    if(rc == -1) {
+      logerror("start:chroot");
+      return EXIT_FAILURE;
+    }
+
+    rc = chdir("/");
+    if(rc == -1) {
+      logerror("start:chdir");
       return EXIT_FAILURE;
     }
   }

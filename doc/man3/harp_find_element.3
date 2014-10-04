@@ -1,0 +1,36 @@
+.Dd $Mdocdate$
+.Dt harp_find_element 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_find_element
+.Nd find elements in a list
+
+.Sh SYNOPSIS
+.In harp.h
+.Vt typedef bool harp_predicate_function_t(void *);
+.Ft harp_list_t *
+.Fn harp_find_element "harp_list_t *list, harp_predicate_function_t *predicate"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_find_element
+function walks through the list
+.Fa list
+calling the function
+.Fa predicate
+on every element of the list until it returns
+.Dv true .
+When this happens, the current node is returned.
+
+.Sh RETURN VALUES
+
+When one element of the list matches the predicate, the node of that element is
+returned. It can also be seen as the sublist from that node to the end of the
+list. Should no elements match,
+.Dv HARP_EMPTY_LIST
+is returned.
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3

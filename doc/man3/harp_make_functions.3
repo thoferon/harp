@@ -1,0 +1,67 @@
+.Dd $Mdocdate$
+.Dt harp_make_functions 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_make_*
+.Nd make parts of configurations
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_filter_t *
+.Fn harp_make_hostnames_filter "harp_list_t *hostnames"
+.Ft harp_filter_t *
+.Fn harp_make_ports_filter "harp_list_t *ports"
+.Ft harp_resolver_t *
+.Fn harp_make_static_path_resolver "char *path"
+.Ft harp_resolver_t *
+.Fn harp_make_server_resolver "char *hostname, int port"
+.Ft harp_config_t *
+.Fn harp_make_empty_config
+.Vt typedef unsigned short harp_prob_t;
+.Ft harp_choice_t *
+.Fn harp_make_choice "harp_prob_t probablity, harp_config_t *config"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_make_*
+functions are convenience functions to create elements of a configuration. It is
+the recommended way of making those building blocks. They all allocate some
+space in memory and must be freed with the corresponding
+.Fn harp_free_*
+functions.
+
+The declarations are mostly self-explanatory but here are a few notes:
+
+The list
+.Fa hostnames
+of the function
+.Fn harp_make_hostnames_filter
+is a list which elements of strings as
+.Ft char * .
+
+The list
+.Fa ports
+of the function
+.Fn harp_make_ports_filter
+is a list which elements are numbers as
+.Ft int .
+
+The argument
+.Fa probability
+of the function
+.Fn harp_make_choice
+is not an actual probability. It simply is the weight of the subconfiguration
+relatively to the others in a choice group.
+
+The easiest way to get more information about how those structures are defined
+is probably to directly have a look in
+.Pa harp.h
+or in the Texinfo documentation. Try running `info harp`.
+
+.Sh SEE ALSO
+
+.Xr harp_write_configs 3 ,
+.Xr harp_singleton 3 ,
+.Xr harp_cons_functions 3 ,
+.Xr harp_free_functions 3

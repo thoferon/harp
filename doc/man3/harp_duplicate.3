@@ -1,0 +1,36 @@
+.Dd $Mdocdate$
+.Dt harp_duplicate 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_duplicate
+.Nd duplicate a list in memory
+
+.Sh SYNOPSIS
+.In harp.h
+.Vt typedef void *harp_duplicate_function_t(void *);
+.Ft harp_list_t *
+.Fn harp_duplicate "harp_list_t *list, harp_duplicate_function_t *duplicate"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_duplicate
+function walks through the list
+.Fa list
+cloning every node and element in it to create a new identical list in memory.
+If
+.Fa duplicate
+is
+.Dv NULL ,
+only the nodes get duplicated and the new list reuses the same elements. In this
+case, one of the list should be deallocated with
+.Fn harp_free_list
+without passing a
+.Ft harp_free_function_t
+to avoid deallocating the elements twice.
+
+.Sh SEE ALSO
+
+.Xr harp_singleton 3 ,
+.Xr harp_free_list 3 ,
+.Xr harp_duplicate_functions 3

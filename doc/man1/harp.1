@@ -1,0 +1,66 @@
+.Dd $Mdocdate$
+.Dt harp 1 "libharp manual"
+
+.Sh NAME
+.Nm harp
+.Nd HTTP reverse proxy with IP-dependent configurations
+
+.Sh SYNOPSIS
+.Nm
+.Op Fl hVb
+.Op Fl -help
+.Op Fl -version
+.Op Fl -background
+.Op Fl c | Fl -config-path Ar config-path
+.Op Fl n | Fl -thread-number Ar thread-number
+.Op Fl u | Fl -user Ar user
+.Op Fl g | Fl -group Ar group
+.Op Fl -chroot Ar chroot-directory
+.Op Fl -syslog-facility Ar facility
+
+.Sh DESCRIPTION
+
+.Nm
+is an HTTP reverse proxy dispatching requests according to different
+configurations depending on the client's IP address.
+
+The manual contains more information about how to use and configure harp.
+You can access it by typing the following command provided the documentation
+is installed on your computer.
+
+.Ic info harp
+
+.Sh OPTIONS
+
+In order to see the default values for certain options, the program can be run
+with the option
+.Fl h
+or
+.Fl -help .
+
+.Bl -tag -width Ds
+.It Fl h , Fl -help
+Display the help message.
+.It Fl V , Fl -version
+Display the version number and some additional information.
+.It Fl b , Fl -background
+Run the program in the background. It creates a new process group.
+.It Fl c , Fl -config-path
+Specify a different configuration file.
+.It Fl n , Fl -thread-number
+Number of worker threads to spawn, equivalent to the number of concurrent
+requests.
+.It Fl u , Fl -user
+User to run the program as.
+.It Fl g , Fl -group
+Group to run the program with.
+.It Fl -chroot
+Directory to which the root directory is set if specified.
+.It Fl -syslog-facility
+Syslog facility where the messages are sent. See
+.Xr syslog 3 .
+.El
+
+.Sh BUGS
+Please report bugs using the issue tracker at
+.Lk http://hub.darcs.net/thoferon/harp/issues .

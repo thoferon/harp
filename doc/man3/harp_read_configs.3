@@ -1,0 +1,65 @@
+.Dd $Mdocdate$
+.Dt harp_read_configs 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_read_configs
+.Nd read a configuration file
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft harp_list_t *
+.Fn harp_read_configs "char *path, char *root_directory"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_read_configs
+function reads a configuration file and returns a list of configurations as one
+file can contain several of them.
+
+When
+.Fa root_directory
+is
+.Dv NULL ,
+.Fa path
+is used alone to determine the path of the file to read. If a
+.Fa root_directory
+is passed, it is used to translate the path as if the
+.Fa root_directory
+was
+.Pa / .
+It is especially useful when reading a file from a path in a chroot jail before
+the program is chrooted (this is how harp reads the configuration for the first
+time when it is runned.) Relative paths are relative to
+.Pa / .
+It means that, with
+.Fa root_directory
+being
+.Pa /chroot/dir ,
+both
+.Pa subdir/harp.conf
+and
+.Pa /subdir/harp.conf
+map to
+.Pa /chroot/dir/subdir/harp.conf .
+
+.Sh RETURN VALUES
+
+If the file contains a valid configuration, it returns a list of configurations
+of type
+.Ft harp_config_t .
+Otherwise, it returns
+.Dv NULL
+and sets the value of
+.Va harp_errno
+to the corresponding error code.
+
+.Sh SEE ALSO
+
+.Xr harp_errors 3 ,
+.Xr harp_write_configs 3 ,
+.Xr harp_singleton 3 ,
+.Xr harp_free_list 3 ,
+.Xr harp_make_functions 3 ,
+.Xr harp_cons_functions 3 ,
+.Xr harp_get_ports 3

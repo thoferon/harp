@@ -1,0 +1,40 @@
+.Dd $Mdocdate$
+.Dt harp_write_configs 3 "libharp manual"
+
+.Sh NAME
+.Nm harp_write_configs
+.Nd write configurations to file
+
+.Sh SYNOPSIS
+.In harp.h
+.Ft int
+.Fn harp_write_configs "harp_list_t *list, char *path"
+
+.Sh DESCRIPTION
+
+The
+.Fn harp_write_configs
+function reads a list of configurations
+.Fa list
+to the file specified by
+.Fa path .
+
+The resulting configuration is human-readable and indentend with two spaces.
+
+.Sh RETURN VALUES
+
+This function returns
+.Dv 0
+in case of success and
+.Dv -1
+in case of failure. It also sets
+.Va harp_errno
+with the corresponding error code if an error occurs.
+
+.Sh SEE ALSO
+
+.Xr harp_errors 3 ,
+.Xr harp_read_configs 3 ,
+.Xr harp_make_functions 3 ,
+.Xr harp_cons_functions 3 ,
+.Xr harp_merge_configs 3
