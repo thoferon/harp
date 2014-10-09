@@ -17,9 +17,12 @@ $ sudo make install
 
 # Configuration
 
-To see an exammple, have a look at example.conf at the root of the project.
+To see an example, have a look at example.conf at the root of the project.
 
 # Documentation
+
+The documentation is available on the website (http://www.harphttp.org/) but you
+can also read it offline:
 
 `make install` installs the documentation on your system. You can access it by
 running `info harp`.
@@ -34,7 +37,7 @@ make ps
 
 # License and contribution
 
-The project is licensed under the BSD3 license. You can see it in LICENSE in the
+The project is licensed under the BSD3 license. You can see it in COPYING in the
 root directory.
 
 Contributions are most welcome and you can get more information about it in the

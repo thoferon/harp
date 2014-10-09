@@ -21,7 +21,7 @@ void wait_for_flag_change();
 bool check_reload_config_flag();
 bool check_terminate_flag();
 
-void sigusr1_handler(int);
+void sighup_handler(int);
 void sigterm_handler(int);
 
 void reload_configuration(loader_environment_t *, char *);

@@ -2,8 +2,11 @@ Changes made between 0.9 and 1.0
 
 * Directive `include'
 * Subconfigurations
-* Various bug fixes
+* Fix chroot() and setuid()/setgid()
+* Set process title
 * Man pages and more documentation
 * Better website
 * Default thread number to 32
 * Better parse error messages
+* SIGHUP to reload configuration instead of SIGUSR1
+* Various small bug fixes

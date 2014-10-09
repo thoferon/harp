@@ -45,16 +45,15 @@ http://creativecommons.org/licenses/by/4.0/.
 @end ifnottex
 
 @menu
-* Overview::                    Overview of harp.
-* Installation::                How to install the program from sources.
-* Configuration::               Configuration file, command-line option and
-                                reloading.
-* Options::                     Command-line options to run harp.
-* Error handling::              How harp will react to possible errors.
-* Bugs/Missing features::       What you should do if you encounter a bug.
-* Libharp::                     Basics for using libharp.
-* Contributing::                What you should know to contribute to the project.
-* Index::                       Complete index.
+* Overview::              Overview of harp.
+* Installation::          How to install the program from sources.
+* Configuration::         Configuration file, command-line option and reloading.
+* Options::               Command-line options to run harp.
+* Error handling::        How harp will react to possible errors.
+* Bugs/Missing features:: What you should do if you encounter a bug.
+* Libharp::               Basics for using libharp.
+* Contributing::          What you should know to contribute to the project.
+* Index::                 Complete index.
 @end menu
 
 @node Overview
@@ -477,7 +476,7 @@ matches. The different configurations just need to follow each other.
 @node Option and signal
 @section Option and signal
 
-@cindex SIGUSR1
+@cindex SIGHUP
 @cindex signal
 
 By default, harp will load the configuration from a path like
@@ -497,10 +496,10 @@ $ harp -c /another/path.conf
 @end example
 
 When harp is already running, it reloads the configuration file when receiving
-the signal SIGUSR1. Simply run
+the signal SIGHUP. Simply run
 
 @example
-$ pkill -s SIGUSR1 harp
+$ pkill -HUP harp
 @end example
 
 @node Options

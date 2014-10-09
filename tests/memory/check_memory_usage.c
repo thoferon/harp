@@ -150,10 +150,10 @@ int main(int argc, char **argv) {
       }
     }
 
-    fprintf(stderr, "Sending SIGUSR1\n");
-    rc = kill(getpid(), SIGUSR1);
+    fprintf(stderr, "Sending SIGHUP\n");
+    rc = kill(getpid(), SIGHUP);
     if(rc != 0) {
-      perror("main:kill with SIGUSR1");
+      perror("main:kill with SIGHUP");
       return EXIT_FAILURE;
     }
   }

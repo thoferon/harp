@@ -115,7 +115,7 @@ bool check_terminate_flag() {
  * Signal handlers
  */
 
-void sigusr1_handler(int sig) {
+void sighup_handler(int sig) {
   int saved_errno = errno;
   lock_flags_mutex();
 
@@ -124,7 +124,7 @@ void sigusr1_handler(int sig) {
   if(rc != 0) {
     errno = rc;
     // FIXME: Can't use logerror in a signal handler
-    perror("sigusr1_handler:pthread_cond_signal");
+    perror("sighup_handler:pthread_cond_signal");
   }
 
   unlock_flags_mutex();
