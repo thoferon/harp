@@ -246,6 +246,7 @@ harp_config_t *harp_merge_configs(harp_config_t *config1,
  */
 
 void harp_free_filter(harp_filter_t *filter) {
+  if(filter == NULL) { return; }
   switch(filter->type) {
   case HARP_FILTER_TYPE_HOSTNAMES:
     harp_free_list(filter->hostnames, &free);
@@ -258,11 +259,13 @@ void harp_free_filter(harp_filter_t *filter) {
 }
 
 inline void harp_free_server(harp_server_t *server) {
+  if(server == NULL) { return; }
   free(server->hostname);
   free(server);
 }
 
 void harp_free_resolver(harp_resolver_t *resolver) {
+  if(resolver == NULL) { return; }
   switch(resolver->type) {
   case HARP_RESOLVER_TYPE_STATIC_PATH:
     free(resolver->static_path);
@@ -271,11 +274,11 @@ void harp_free_resolver(harp_resolver_t *resolver) {
     harp_free_server(resolver->server);
     break;
   }
-
   free(resolver);
 }
 
 void harp_free_choice(harp_choice_t *choice) {
+  if(choice == NULL) { return; }
   harp_free_config(choice->config);
   free(choice);
 }
@@ -286,6 +289,7 @@ void harp_free_choice_group(harp_list_t *choice_group) {
 }
 
 void harp_free_config(harp_config_t *config) {
+  if(config == NULL) { return config; }
   harp_free_list(config->filters,
                  (harp_free_function_t*)&harp_free_filter);
   harp_free_list(config->tags,

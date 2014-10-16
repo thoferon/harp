@@ -28,13 +28,13 @@ void logmsg(int priority, const char *format, ...) {
 
 void logerror(const char *name) {
   size_t name_len = strlen(name);
-  char *format = (char*)smalloc(name_len + strlen(": %m") + 1);
+  char *format = (char*)smalloc(name_len + strlen(": %s") + 1);
   strncpy(format, name, name_len);
-  strncat(format, ": %m", 4);
+  strncat(format, ": %s", 4);
   format[name_len + 4] = '\0';
 
   perror(name);
-  syslog(global_facility | LOG_ERR, format);
+  syslog(global_facility | LOG_ERR, format, strerror(errno));
 
   free(format);
 }

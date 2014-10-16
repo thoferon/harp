@@ -70,8 +70,8 @@ harp_config_t *find_config(harp_list_t *configs, request_info_t *request_info,
         } else {
           harp_config_t *result_config =
             harp_merge_configs(chosen_config, subconfig);
-          //harp_free_config(chosen_config);
-          //harp_free_config(subconfig);
+          harp_free_config(chosen_config);
+          harp_free_config(subconfig);
           return result_config;
         }
         return chosen_config;

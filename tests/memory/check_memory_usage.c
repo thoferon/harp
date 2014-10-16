@@ -15,6 +15,7 @@
 
 #include <start.h>
 #include <memory_tracking.h>
+#include <harp.h>
 
 void *start_server(void *ignore) {
   char *argv[3];
@@ -31,6 +32,12 @@ void *start_server(void *ignore) {
 }
 
 int main(int argc, char **argv) {
+  printf("size of harp_filter_t   = %lu bytes\n", sizeof(harp_filter_t));
+  printf("size of harp_resolver_t = %lu bytes\n", sizeof(harp_resolver_t));
+  printf("size of harp_choice_t   = %lu bytes\n", sizeof(harp_choice_t));
+  printf("size of harp_list_t     = %lu bytes\n", sizeof(harp_list_t));
+  printf("size of harp_config_t   = %lu bytes\n", sizeof(harp_config_t));
+
   // Start the server
   int rc;
 
@@ -186,7 +193,7 @@ int main(int argc, char **argv) {
              (int)current->size, current->pointer, current->function_pointer);
     }
     printf("\nTotal memory leaked (in bytes): %i\n", (int)memory_leaked);
-    abort(); // handy to set a breakpoint
+    abort(); // handy to set a breakpoint and/or generate a core dump
   }
 
   return EXIT_SUCCESS;

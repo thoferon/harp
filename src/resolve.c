@@ -259,7 +259,7 @@ resolution_strategy_t resolve_with_server(request_t *request,
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family   = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags    = AI_PASSIVE | AI_NUMERICSERV;
+  hints.ai_flags    = AI_NUMERICSERV;
 
   char port_string[6];
   snprintf(port_string, 6, "%i", server->port);

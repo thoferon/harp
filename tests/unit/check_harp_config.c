@@ -305,6 +305,36 @@ START_TEST (test_harp_free_config_on_full_structure) {
 }
 END_TEST
 
+START_TEST (test_harp_free_filter_with_NULL) {
+  harp_free_filter(NULL);
+}
+END_TEST
+
+START_TEST (test_harp_free_server_with_NULL) {
+  harp_free_server(NULL);
+}
+END_TEST
+
+START_TEST (test_harp_free_resolver_with_NULL) {
+  harp_free_resolver(NULL);
+}
+END_TEST
+
+START_TEST (test_harp_free_choice_with_NULL) {
+  harp_free_choice(NULL);
+}
+END_TEST
+
+START_TEST (test_harp_free_choice_group_with_NULL) {
+  harp_free_choice_group(NULL);
+}
+END_TEST
+
+START_TEST (test_harp_free_config_with_NULL) {
+  harp_free_config(NULL);
+}
+END_TEST
+
 /*
  * Getter functions
  */
@@ -375,6 +405,12 @@ Suite *harp_config_suite() {
 
   TCase *tc_memory = tcase_create("Memory");
   tcase_add_test(tc_memory, test_harp_free_config_on_full_structure);
+  tcase_add_test(tc_memory, test_harp_free_filter_with_NULL);
+  tcase_add_test(tc_memory, test_harp_free_server_with_NULL);
+  tcase_add_test(tc_memory, test_harp_free_resolver_with_NULL);
+  tcase_add_test(tc_memory, test_harp_free_choice_with_NULL);
+  tcase_add_test(tc_memory, test_harp_free_choice_group_with_NULL);
+  tcase_add_test(tc_memory, test_harp_free_config_with_NULL);
 
   TCase *tc_getters = tcase_create("Getters");
   tcase_add_test(tc_getters, test_harp_get_ports);
