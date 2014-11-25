@@ -14,32 +14,41 @@
 #include <smem.h>
 #include <log.h>
 #include <harp.h>
+#include <request.h>
 
 #include <response.h>
 
 // FIXME: Calculate static string lengths at compile time
 
-int send_http_status(int, http_status_t);
-int send_server_header(int);
-int send_connection_header(int);
-int send_content_length_header(int, int);
-int send_content_type_header(int, mime_type_t);
-int send_extra_crlf(int);
+int send_http_status(request_t *, http_status_t);
+int send_server_header(request_t *);
+int send_connection_header(request_t *);
+int send_content_length_header(request_t *, int);
+int send_content_type_header(request_t *, mime_type_t);
+int send_extra_crlf(request_t *);
 
-int send_response_headers(int socket, http_status_t status,
+int send_response_headers(request_t *request, http_status_t status,
                           int content_length, mime_type_t mime_type) {
-#define RETURNIFFAILURE(exp) do { rc = (exp); if(rc != 0) { return rc; } } while(0)
   int rc;
-  RETURNIFFAILURE(send_http_status(socket, status));
-  RETURNIFFAILURE(send_server_header(socket));
-  RETURNIFFAILURE(send_connection_header(socket));
-  RETURNIFFAILURE(send_content_length_header(socket, content_length));
-  RETURNIFFAILURE(send_content_type_header(socket, mime_type));
-  RETURNIFFAILURE(send_extra_crlf(socket));
+
+#define RETURNIFFAILURE(exp) do {               \
+    rc = (exp);                                 \
+    if(rc != 0) {                               \
+      return rc;                                \
+    }                                           \
+  } while(0)
+
+  RETURNIFFAILURE(send_http_status(request, status));
+  RETURNIFFAILURE(send_server_header(request));
+  RETURNIFFAILURE(send_connection_header(request));
+  RETURNIFFAILURE(send_content_length_header(request, content_length));
+  RETURNIFFAILURE(send_content_type_header(request, mime_type));
+  RETURNIFFAILURE(send_extra_crlf(request));
+
   return 0;
 }
 
-int send_http_status(int socket, http_status_t status) {
+int send_http_status(request_t *request, http_status_t status) {
   char *str;
   int status_code;
   char *status_message;
@@ -63,7 +72,7 @@ int send_http_status(int socket, http_status_t status) {
   default: return -1;
   }
 
-  // Should we send HTTP/1.0 or HTTP/1.1?
+  // Should it send HTTP/1.0 or HTTP/1.1?
   int count = asprintf(&str, "HTTP/1.1 %i %s\r\n", status_code, status_message);
   if(count == -1) {
     logerror("send_http_status:asprintf");
@@ -71,48 +80,29 @@ int send_http_status(int socket, http_status_t status) {
     return -1;
   }
 
-  int rc;
-  while((rc = send(socket, str, count, MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
-        && errno == EAGAIN);
+  int sock = request->aconnection->socket;
+  int rc   = send_with_request(request, sock, str, count);
   free(str);
 
-  if(rc == -1) {
-    logerror("send_http_status:send");
-    return -1;
-  }
-
-  return 0;
+  return rc;
 }
 
-int send_server_header(int socket) {
+int send_server_header(request_t *request) {
   char *server_header = "Server: " PACKAGE_STRING "\r\n";
   size_t server_header_len = strlen(server_header);
-  int rc;
-  while((rc = send(socket, server_header, server_header_len,
-                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
-        && errno == EAGAIN);
-  if(rc == -1) {
-    logerror("send_server_header:send");
-    return -1;
-  }
-  return 0;
+  int sock = request->aconnection->socket;
+  return send_with_request(request, sock, server_header, server_header_len);
 }
 
-int send_connection_header(int socket) {
+int send_connection_header(request_t *request) {
   char *connection_header = "Connection: close\r\n";
   size_t connection_header_len = strlen(connection_header);
-  int rc;
-  while((rc = send(socket, connection_header, connection_header_len,
-                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
-        && errno == EAGAIN);
-  if(rc == -1) {
-    logerror("send_connection_header:send");
-    return -1;
-  }
-  return 0;
+  int sock = request->aconnection->socket;
+  return send_with_request(request, sock, connection_header,
+                           connection_header_len);
 }
 
-int send_content_length_header(int socket, int content_length) {
+int send_content_length_header(request_t *request, int content_length) {
   char *content_length_header;
   int count = asprintf(&content_length_header, "Content-Length: %u\r\n",
                        content_length);
@@ -122,22 +112,14 @@ int send_content_length_header(int socket, int content_length) {
     return -1;
   }
 
-  int rc;
-  while((rc = send(socket, content_length_header, count,
-                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
-        && errno == EAGAIN);
-
+  int sock = request->aconnection->socket;
+  int rc   = send_with_request(request, sock, content_length_header, count);
   free(content_length_header);
 
-  if(rc == -1) {
-    logerror("send_content_length_header:send");
-    return -1;
-  }
-
-  return 0;
+  return rc;
 }
 
-int send_content_type_header(int socket, mime_type_t mime_type) {
+int send_content_type_header(request_t *request, mime_type_t mime_type) {
   char *formatted_mime_type = NULL;
   switch(mime_type) {
   case MIME_TYPE_UNKNOWN: break;
@@ -163,30 +145,16 @@ int send_content_type_header(int socket, mime_type_t mime_type) {
     return -1;
   }
 
-  int rc;
-  while((rc = send(socket, content_type_header, count,
-                   MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
-        && errno == EAGAIN);
-
+  int sock = request->aconnection->socket;
+  int rc   = send_with_request(request, sock, content_type_header, count);
   free(content_type_header);
 
-  if(rc == -1) {
-    logerror("send_content_type_header:send");
-    return -1;
-  }
-
-  return 0;
+  return rc;
 }
 
-int send_extra_crlf(int socket) {
-  int rc;
-  while((rc = send(socket, "\r\n", 2, MSG_DONTWAIT | MSG_NOSIGNAL)) == -1
-        && errno == EAGAIN);
-  if(rc == -1) {
-    logerror("send_extra_crlf:send");
-    return -1;
-  }
-  return 0;
+int send_extra_crlf(request_t *request) {
+  int sock = request->aconnection->socket;
+  return send_with_request(request, sock, "\r\n", 2);
 }
 
 mime_type_t get_mime_type(const char *path) {

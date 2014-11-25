@@ -289,7 +289,7 @@ void harp_free_choice_group(harp_list_t *choice_group) {
 }
 
 void harp_free_config(harp_config_t *config) {
-  if(config == NULL) { return config; }
+  if(config == NULL) { return; }
   harp_free_list(config->filters,
                  (harp_free_function_t*)&harp_free_filter);
   harp_free_list(config->tags,

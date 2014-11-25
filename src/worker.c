@@ -82,9 +82,9 @@ void *worker(worker_environment_t *env) {
       request_t *request = create_request(aconnection);
       if(request != NULL) {
         harp_config_t *config = find_config(env->configs, request->info,
-                                             aconnection->addr_hash);
+                                            aconnection->addr_hash);
         resolution_strategy_t strategy = resolve_request(request, config);
-        execute_fallback_strategy(request->aconnection->socket, strategy);
+        execute_fallback_strategy(request, strategy);
         harp_free_config(config);
         destroy_request(request); // Destroys the aconnection as well
       } else {

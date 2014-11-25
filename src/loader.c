@@ -246,7 +246,9 @@ void terminate(loader_environment_t *loader_environment) {
 
   // No lock because the state of valid is false at creation and can only
   // be changed to false afterwards anyway.
-  loader_environment->worker_environment->valid = false;
+  if(loader_environment->worker_environment != NULL) {
+    loader_environment->worker_environment->valid = false;
+  }
 
   int thread_number  = loader_environment->options->thread_number;
   pthread_t *threads = loader_environment->threads;

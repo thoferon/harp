@@ -14,7 +14,7 @@ typedef enum resolution_strategy {
 } resolution_strategy_t;
 
 resolution_strategy_t resolve_request(request_t *, harp_config_t *);
-void execute_fallback_strategy(int, resolution_strategy_t);
+void execute_fallback_strategy(request_t *, resolution_strategy_t);
 
 resolution_strategy_t resolve_with_static_path(request_t *, char *);
 resolution_strategy_t resolve_with_server(request_t *, harp_server_t *,

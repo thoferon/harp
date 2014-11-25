@@ -22,15 +22,20 @@ START_TEST (test_make_request_info) {
 END_TEST
 
 START_TEST (test_make_request) {
-  request_info_t *request_info = make_request_info(strdup("/"), strdup("example.com"), 80);
+  request_info_t *request_info =
+    make_request_info(strdup("/"), strdup("example.com"), 80);
   request_t *request = make_request(request_info, (aconnection_t*)123,
-                                    strdup("GET / HTTP/1.1"), 15);
+                                    strdup("GET / HTTP/1.1"), 15, 12345);
 
   ck_assert_str_eq(request->info->path, "/");
   ck_assert_str_eq(request->info->hostname, "example.com");
   ck_assert_int_eq(request->info->port, 80);
   ck_assert_str_eq(request->buffer, "GET / HTTP/1.1");
   ck_assert_int_eq(request->buffer_size, 15);
+  ck_assert_int_eq(request->start, 12345);
+  ck_assert_int_eq(request->last_transfer, 12345);
+  ck_assert_int_eq(request->total_transferred, 0);
+
   ck_assert(request->aconnection == (aconnection_t*)123);
 
   free_request(request);

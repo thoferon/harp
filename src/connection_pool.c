@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
 
@@ -16,6 +15,7 @@
 #include <log.h>
 #include <harp.h>
 #include <connection_pool.h>
+#include <utils.h>
 
 #define MAXCONN 128
 
@@ -147,15 +147,8 @@ lconnection_t *create_lconnection(int port) {
     RETURNERROR();
   }
 
-  int flags = fcntl(sock, F_GETFL, NULL);
-  if(flags == -1) {
-    logerror("create_connection:fcntl with F_GETFL");
-    RETURNERROR();
-  }
-
-  rc = fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+  rc = set_nonblocking(sock);
   if(rc == -1) {
-    logerror("create_connection:fcntl with F_SETFL");
     RETURNERROR();
   }
 
@@ -244,8 +237,7 @@ aconnection_t *get_next_connection(harp_list_t *lconnections,
   int i;
 
   while(1) {
-    // FIXME: Any way to make it faster?
-    int rc = poll(pollfds, n, 5 * 1000);
+    int rc = poll(pollfds, n, 1000);
     if(rc == -1) {
       logerror("get_next_connection:poll");
     } else if(rc == 0) {
@@ -260,10 +252,21 @@ aconnection_t *get_next_connection(harp_list_t *lconnections,
         struct sockaddr_storage addr;
         socklen_t addrlen = sizeof(struct sockaddr_storage);
 
-        int sock = accept(lconnection->socket, (struct sockaddr*)&addr, &addrlen);
+        int sock = accept(lconnection->socket,
+                          (struct sockaddr*)&addr, &addrlen);
         if(sock != -1) {
+          rc = set_nonblocking(sock);
+          if(rc == -1) {
+            rc = close(sock);
+            if(rc == -1) {
+              logerror("get_next_connection:close");
+            }
+            return NULL;
+          }
+
           unsigned int addr_hash = compute_hash((struct sockaddr_in*)&addr);
           return make_aconnection(addr_hash, lconnection->port, sock);
+
         } else if(sock != EINTR || sock != EWOULDBLOCK) {
           logerror("get_next_connection:accept");
         }

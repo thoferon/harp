@@ -1,3 +1,11 @@
+Changes made between 1.0 and 1.1
+
+* Connections are now dropped in certain conditions are met:
+    - the request has been sent more than 1 minute ago and
+    - the connection has an average speed of less than 2 kB/s or the connection
+        has been idle for more than 2 minutes.
+* Bugfixes
+
 Changes made between 0.9 and 1.0
 
 * Directive `include'

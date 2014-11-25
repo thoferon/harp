@@ -499,7 +499,7 @@ When harp is already running, it reloads the configuration file when receiving
 the signal SIGHUP. Simply run
 
 @example
-$ pkill -HUP harp
+$ pkill -SIGHUP harp
 @end example
 
 @node Options
@@ -619,11 +619,11 @@ back to the cient.
 @item Can't connect to the upstream server
 @tab 502 Bad Gateway
 @tab No
-@item The server takes too long to respond
+@item It take too long to connect to the server
 @tab 504 Gateway Timeout
 @tab No
 @item Error when polling the connection (poll())
-@tab 500 Internal Error
+@tab 504 Bad Gateway (1)
 @tab Yes
 @item Error when making the socket non-blocking (fcntl())
 @tab 500 Internal Error
@@ -635,6 +635,14 @@ back to the cient.
 @tab Close the connection
 @tab No
 @end multitable
+
+(1) It probably shouldn't but the implementation is simpler this way.
+
+Connections are kept open for at least 1 minute. Afterwards, the total average
+speed should stay above 2 kilobytes per second (2048 bytes per second) and the
+maximum idle time (any period of time where no data is transferred) is 2
+minutes. If any of those conditions is not met, the connection is closed and the
+worker is ready to process new requests.
 
 @node Bugs/Missing features
 @chapter Bugs and missing features

@@ -73,7 +73,7 @@ int start(int argc, char **argv) {
   if(options->group) {
     grp = getgrnam(options->group);
     if(grp == NULL) {
-      logmsg(LOG_ERR, "start:getpwnam(%s): Couldn't find group\n",
+      logmsg(LOG_ERR, "start:getgrnam(%s): Couldn't find group\n",
              options->group);
       return EXIT_FAILURE;
     }
